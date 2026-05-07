@@ -69,7 +69,7 @@ if not st.session_state.analysis_done:
     st.subheader("")
     st.subheader("This App is created for analyzing pdb files generated from Protein Design software like AlphaFold or BindCraft.")
     #st.subheader("")
-    st.image('0000000000.jpg', width = 100)
+    st.image('0000000000.jpg', width = 1000)
     st.subheader("")
     st.subheader("Upload Files")
     pdb_files = st.file_uploader("Upload PDB files", type=["pdb", "cif"], accept_multiple_files=True)
