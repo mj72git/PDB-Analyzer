@@ -67,8 +67,8 @@ You have two choices:
 If you want to install it locally:
 ####  Dependencies 
 
-git clone https://github.com/mj72git/BindCraft_Output_Analyse.git
-cd BindCraft_Output_Analyse-main
+git clone https://github.com/mj72git/PDB-Analyzer.git
+cd PDB-Analyzer-main
 
 - Python
 - MDAnalysis
