@@ -59,7 +59,7 @@ st.sidebar.download_button(
     mime="text/plain"
 )
 mj = st.sidebar.header("App created by MJ Shadfar")
-st.sidebar.write(" [Github Repository](https://github.com/mj72git/BindCraft_Output_Analyse)")
+st.sidebar.write(" [Github Repository](https://github.com/mj72git/PDB-Analyzer)")
 st.sidebar.caption("PDB Analyzer v1.0.0")
 st.sidebar.caption("")
 st.sidebar.caption("The last modify : 08 May 2026")
