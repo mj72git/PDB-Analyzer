@@ -66,7 +66,7 @@ st.sidebar.caption("The last modify : 08 May 2026")
 
 ############################# FILE UPLOAD & ANALYSIS ########################
 if not st.session_state.analysis_done:
-    st.subheader("It's a Web App for analyzing pdb files generated from Protein Design software like AlphaFold or BindCraft.")
+    st.subheader("This App is for analyzing pdb files generated from Protein Design software like AlphaFold or BindCraft.")
     st.subheader("")
     st.subheader("Upload Files")
     pdb_files = st.file_uploader("Upload PDB files", type=["pdb", "cif"], accept_multiple_files=True)
