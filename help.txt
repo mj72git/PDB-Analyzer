@@ -1,0 +1,27 @@
+PDB Analyzer
+
+It is a Streamlit-based web application for analyzing pdb files, exploring interface metrics, and visualizing 3D protein structures.
+
+Step 1: Define the target and binder chains. 
+
+Step 2: Clarify the residue numbering offset between the initial target PDB and the final output. 
+
+Step 3: Upload the PDB files.
+
+ After a while, the app provides four tabs: 
+
+1. Summary:
+ - Displays all analysed results in an interactive table.  
+
+2. Visualisations: 
+ - Interactive 3D structure viewer using py3Dmol. 
+ - Customizable chain colouring. 
+ - Counts and plots the number of 3 Å and 4 Å contacts between binder and target. 
+
+3. Details: 
+ - For each design, you can inspect: 
+      • Target and binder sequences
+      • Residue–residue contact pairs (3 Å and 4 Å) and distance   
+
+
+Author: MJ Shadfar
