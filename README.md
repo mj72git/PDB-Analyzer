@@ -61,7 +61,7 @@ The app will automatically match each PDB to its corresponding row in the CSV.
 
 You have two choices:  
 - install all the dependencies.
-- just use the Wep App via the link.  (https://bindcraftoutputanalyse-ednrdmyx97eon4hlfkjatb.streamlit.app/)
+- just use the Wep App via the link.  (https://pdbanalyzermjshadfar.streamlit.app/)
 
 
 If you want to install it locally:
