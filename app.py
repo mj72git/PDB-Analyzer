@@ -371,7 +371,7 @@ if st.session_state.analysis_done and st.session_state.df_out is not None:
                 st.text(format_pairs(row['pairs_4A']))
                 #st.text(format_pairs_with_distance(row['pairs_4A'], pdb_text, target_chain, binder_chain, add_target_res_offset))
                 st.write("------------------------------------------------------------------")
-                st.write("**hydrophobic pathes**")
+                st.write("**hydrophobic patches**")
                 st.text(format_pairs(row['hypho']))
 
 
