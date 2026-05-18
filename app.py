@@ -98,8 +98,15 @@ if not st.session_state.analysis_done:
 
                 #base = os.path.splitext(os.path.basename(pdb_path))[0]  #omitt the .pdb
                 #base = "_".join(base.split("_")[:-1]) #or os.path.splitext(os.path.basename(pdb_path))[0]
-                base = extract_design_id(pdb.name)
 
+
+                ######## changed!
+                #base = extract_design_id(pdb.name)
+                # This removes the '.pdb' extension but leaves the rest of the filename completely intact
+                base = os.path.splitext(pdb.name)[0]
+                ########
+
+                
                 #base = "_".join(base.split("_")[:-1]) or os.path.splitext(os.path.basename(pdb_path))[0]
                 #matched_row = {}
 
