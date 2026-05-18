@@ -72,7 +72,7 @@ if not st.session_state.analysis_done:
     st.image('image.jpg', width = 500)
     st.subheader("")
     st.subheader("Upload Files")
-    pdb_files = st.file_uploader("Upload PDB files", type=["pdb", "cif"], accept_multiple_files=True)
+    pdb_files = st.file_uploader("Upload PDB files", type=["pdb"], accept_multiple_files=True)
     #csv_file = st.file_uploader("Upload design metrics CSV. (final_design_stats.csv)", type="csv")
 
     #if pdb_files and csv_file:
