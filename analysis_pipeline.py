@@ -223,12 +223,14 @@ def analyze_design(pdb_path, target_chain='A', binder_chain='B', add_target_res_
     out['pairs_4A'] = pairs4
     out['hypho'] = hypho_list
 
-    # Unique contacting residues
-    target_res_set = set([p[0][0] for p in pairs4])
-    binder_res_set = set([p[1][0] for p in pairs4])
+    ##############
+    # Unique contacting residues (#### changed 4 to 3 )
+    target_res_set = set([p[0][0] for p in pairs3])
+    binder_res_set = set([p[1][0] for p in pairs3])
     out['n_target_interface_residues'] = len(target_res_set)
     out['n_binder_interface_residues'] = len(binder_res_set)
-
+    ##############
+    
     # H-bond-like
     hb_count, hb_pairs = count_hbond_like(target, binder, cutoff=3.5)
     out['hbond_like_count'] = hb_count
