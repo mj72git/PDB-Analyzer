@@ -170,14 +170,14 @@ if st.session_state.analysis_done and st.session_state.df_out is not None:
     with tab1:
         st.subheader("Analysis Summary")
         df_display = st.session_state.df_out.copy()
-        for col in ['pairs_3A', 'pairs_4A', 'hypho']:
+        for col in ['Average_pLDDT','Average_i_pLDDT','pairs_3A', 'pairs_4A', 'hypho']:
             if col in df_display.columns:
                 df_display[col] = df_display[col].apply(lambda x: str(x))
         st.dataframe(df_display)
 
         st.subheader("Ranked Designs")
         df_rank_display = st.session_state.df_rank.copy()
-        for col in ['pairs_3A', 'pairs_4A', 'hypho']:
+        for col in ['Average_pLDDT','Average_i_pLDDT','pairs_3A', 'pairs_4A', 'hypho']:
             if col in df_rank_display.columns:
                 df_rank_display[col] = df_rank_display[col].apply(lambda x: str(x))
         st.dataframe(df_rank_display)
