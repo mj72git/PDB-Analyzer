@@ -1,5 +1,5 @@
 
-# PDB Analyzer Web App 
+# PDB Analyzer Web App (v1.0.0) 
 
 This is a Streamlit-based web application for analyzing **PDB files**, exploring **interface metrics**, and visualizing **3D protein structures**.
 
