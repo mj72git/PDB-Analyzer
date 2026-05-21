@@ -183,7 +183,8 @@ def extract_sequence(atomgroup):
 
 # ----------------------------- Main design analysis -----------------------------
 
-def analyze_design(pdb_path, target_chain='A', binder_chain='B', add_target_res_offset=0, freesasa_available=False, tmpdir=None):
+def analyze_design(pdb_path, target_chain='A', binder_chain='B', add_target_res_offset=0, freesasa_available=False,
+                   tmpdir=None):
     """Analyze a single design PDB file. Returns dict of computed metrics."""
     out = {}
     out['pdb'] = pdb_path
@@ -194,7 +195,6 @@ def analyze_design(pdb_path, target_chain='A', binder_chain='B', add_target_res_
         return out
 
     # Support chain selection: MDAnalysis may use chainIDs as segids depending on file
-    # We'll try both selectors (chainID and segid) for robustness
     def select_non_h(target_chain_letter):
         sel1 = u.select_atoms(f"chainID {target_chain_letter} and not name H*")
         if len(sel1) > 0:
@@ -202,7 +202,6 @@ def analyze_design(pdb_path, target_chain='A', binder_chain='B', add_target_res_
         sel2 = u.select_atoms(f"segid {target_chain_letter} and not name H*")
         if len(sel2) > 0:
             return sel2
-        # fallback: try chain by residue range? return empty
         return sel1
 
     target = select_non_h(target_chain)
@@ -211,10 +210,10 @@ def analyze_design(pdb_path, target_chain='A', binder_chain='B', add_target_res_
     out['target_atoms'] = len(target)
     out['binder_atoms'] = len(binder)
 
-    # Contacts
-   # 3.0A Contacts and Hydrophobic Patches
+    # 1. Contacts Calculation (MUST BE DONE FIRST)
+    # 3.0A Contacts and Hydrophobic Patches
     pairs3, hypho_list = residue_contacts(target, binder, cutoff=3.0, add_target_res_offset=add_target_res_offset)
-    
+
     # 4.0A Contacts
     pairs4, _ = residue_contacts(target, binder, cutoff=4.0, add_target_res_offset=add_target_res_offset)
     out['n_contacts_3A'] = len(pairs3)
@@ -223,28 +222,58 @@ def analyze_design(pdb_path, target_chain='A', binder_chain='B', add_target_res_
     out['pairs_4A'] = pairs4
     out['hypho'] = hypho_list
 
-    ##############
-    # Unique contacting residues (#### changed 4 to 3 )
+    # 2. Unique contacting residues
     target_res_set = set([p[0][0] for p in pairs3])
     binder_res_set = set([p[1][0] for p in pairs3])
     out['n_target_interface_residues'] = len(target_res_set)
     out['n_binder_interface_residues'] = len(binder_res_set)
-    ##############
-    
-    # H-bond-like
+
+    #### FINAL FIXED pLDDT SECTION (Matches BindCraft Scale & Interface) ####
+    # 1. Select Alpha Carbons (CA) for Target and Binder
+    target_ca = u.select_atoms(f"(chainID {target_chain} or segid {target_chain}) and name CA")
+    binder_ca = u.select_atoms(f"(chainID {binder_chain} or segid {binder_chain}) and name CA")
+
+    # 2. Get the Binder Average (Divided by 100 to match BindCraft scale 0-1)
+    raw_binder = binder_ca.tempfactors.mean() if len(binder_ca) > 0 else 0
+    avg_binder = raw_binder / 100.0
+
+    # 3. Extract residue lists from pairs4 (4.0A) to capture all interface positions
+    target_interface_res = [p[0][0] for p in pairs4]
+    binder_interface_res = [p[1][0] for p in pairs4]
+
+    # Calculate Interface pLDDT if we have touching residues
+    if target_interface_res and binder_interface_res:
+        target_i_atoms = u.select_atoms(
+            f"(chainID {target_chain} or segid {target_chain}) and name CA and resid {' '.join(map(str, target_interface_res))}")
+        binder_i_atoms = u.select_atoms(
+            f"(chainID {binder_chain} or segid {binder_chain}) and name CA and resid {' '.join(map(str, binder_interface_res))}")
+
+        interface_atoms = target_i_atoms + binder_i_atoms
+        raw_interface = interface_atoms.tempfactors.mean() if len(interface_atoms) > 0 else 0
+        avg_interface = raw_interface / 100.0
+    else:
+        avg_interface = 0.0
+
+    # 4. Save to output dictionary with BindCraft style scale
+    #out['Average-binder-pLDDT'] = round(float(avg_binder), 2)
+    out['Average-pLDDT'] = round(float(avg_binder), 2)
+    out['Average-i-pLDDT'] = round(float(avg_interface), 2)
+    #########################################################################
+    #########################################################################
+
+    # 4. H-bond-like Calculation
     hb_count, hb_pairs = count_hbond_like(target, binder, cutoff=3.5)
     out['hbond_like_count'] = hb_count
     out['hbond_pairs'] = hb_pairs
 
-    # Clashes (fast check). This can be slow for huge systems.
+    # 5. Clashes check
     try:
         clashes = count_clashes(u, cutoff=2.2)
     except Exception:
         clashes = None
     out['clash_count'] = clashes
 
-
-    # Sequences
+    # 6. Sequences extraction
     out['target_seq'] = extract_sequence(target)
     out['binder_seq'] = extract_sequence(binder)
 

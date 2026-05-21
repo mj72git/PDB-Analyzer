@@ -1,4 +1,4 @@
-PDB Analyzer
+PDB Analyzer (v1.1.0)
 
 It is a Streamlit-based web application for analyzing pdb files, exploring interface metrics, and visualizing 3D protein structures.
 

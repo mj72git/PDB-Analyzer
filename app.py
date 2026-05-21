@@ -60,9 +60,9 @@ st.sidebar.download_button(
 )
 mj = st.sidebar.header("App created by MJ Shadfar")
 st.sidebar.write(" [Github Repository](https://github.com/mj72git/PDB-Analyzer)")
-st.sidebar.caption("PDB Analyzer v1.0.0")
+st.sidebar.caption("PDB Analyzer v1.1.0")
 st.sidebar.caption("")
-st.sidebar.caption("The last modify : 08 May 2026")
+st.sidebar.caption("The last modify : 22 May 2026")
 
 ############################# FILE UPLOAD & ANALYSIS ########################
 if not st.session_state.analysis_done:
@@ -132,7 +132,9 @@ if not st.session_state.analysis_done:
                 #for col in ['Average_pLDDT','Average_i_pLDDT','Average_pTM','Average_i_pTM','Average_pAE','Average_i_pAE','Average_dG','Average_dSASA','Average_Binder_pLDDT','Average_n_InterfaceResidues']:
                     #record[col] = matched_row.get(col, np.nan)
                 record.update({
-
+                    'Average_pLDDT' : r.get('Average-pLDDT'),
+                    'Average_i_pLDDT' : r.get('Average-i-pLDDT'),
+                    #'Average_binder_pLDDT' : r.get('Average-binder-pLDDT'),
                     'n_contacts_3A': r.get('n_contacts_3A'),
                     'n_contacts_4A': r.get('n_contacts_4A'),
                     'n_target_interface_residues': r.get('n_target_interface_residues'),
@@ -156,7 +158,7 @@ if not st.session_state.analysis_done:
             #for col in ['Average_i_pTM','Average_dSASA','Average_pLDDT']:
                 #if col not in df_rank.columns:
                     #df_rank[col] = np.nan
-            st.session_state.df_rank = df_rank.sort_values(by=['n_contacts_3A','n_contacts_4A'], ascending=[False, False])
+            st.session_state.df_rank = df_rank.sort_values(by=['n_contacts_3A','Average_pLDDT','Average_i_pLDDT','n_contacts_4A'], ascending=[False, False, False, False])
             st.session_state.analysis_done = True
             st.rerun()
 
