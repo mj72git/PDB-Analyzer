@@ -60,14 +60,14 @@ st.sidebar.download_button(
 )
 mj = st.sidebar.header("App created by MJ Shadfar")
 st.sidebar.write(" [Github Repository](https://github.com/mj72git/PDB-Analyzer)")
-st.sidebar.caption("PDB Analyzer v1.1.0")
+st.sidebar.caption("PDB Analyser v1.1.0")
 st.sidebar.caption("")
 st.sidebar.caption("The last modify : 22 May 2026")
 
 ############################# FILE UPLOAD & ANALYSIS ########################
 if not st.session_state.analysis_done:
     st.subheader("")
-    st.subheader("This App is created for analyzing pdb files generated from Protein Design software like AlphaFold or BindCraft.")
+    st.subheader("This App is created for analysing pdb files generated from Protein Design software like AlphaFold or BindCraft.")
     #st.subheader("")
     st.image('image.jpg', width = 500)
     st.subheader("")
