@@ -18,8 +18,8 @@ except ImportError:
 
 from analysis_pipeline import analyze_design
 from helper import *
-st.set_page_config(page_title="PDB Analyzer", layout="wide")
-st.title("PDB Analyzer Web Application")
+st.set_page_config(page_title="PDB Analyser", layout="wide")
+st.title("PDB Analyser Web Application")
 
 def format_pairs(pairs):
     if not pairs or pairs == 'nan':
