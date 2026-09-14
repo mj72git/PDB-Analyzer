@@ -44,6 +44,11 @@ For each design, you can inspect:
 
 ---
 
+### ✅ 4. Overall Tab
+- Displays Frequency of target residues at interface (3 Å, 4 Å, hydrophobic contacts & salt bridge)
+
+---
+
 ## 📁 Input Requirements
 
 Upload the following:
