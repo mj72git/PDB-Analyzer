@@ -19,6 +19,7 @@ except ImportError:
 from analysis_pipeline import analyze_design
 from helper import *
 st.set_page_config(page_title="PDB Analyser", layout="wide")
+st.image('uoa.jpg', width=200)
 st.title("PDB Analyser Web Application")
 
 def format_pairs(pairs):
@@ -26,11 +27,21 @@ def format_pairs(pairs):
         return "None"
     try:
         #return " ".join([f"{a[0]} {a[1]} ↔ {b[0]} {b[1]}" for a, b in pairs])
-        return " ".join([f"{a[0]} {a[1]}   ↔   {b[0]} {b[1]} \n" for a, b in pairs])
+        #return " ".join([f"{a[0]} {a[1]} {a[2]}   ↔   {b[0]} {b[1]} {b[2]} \n" for a, b in pairs])
+        return " ".join([f"{a[0]} {a[1]}  ({a[2]})    ↔   {b[0]} {b[1]}   ({b[2]})  \n" for a, b in pairs])
 
     except Exception:
         return str(pairs)
 
+def format_pairs_contacts_only(pairs):
+    if not pairs or pairs == 'nan':
+        return "None"
+    try:
+        return " ".join([f"{a[0]} {a[1]} ↔ {b[0]} {b[1]} \n" for a, b in pairs])
+        #return " ".join([f"{a[0]} {a[1]} ** {a[2]}    ↔   {b[0]} {b[1]}  ** {b[2]}  \n" for a, b in pairs])
+
+    except Exception:
+        return str(pairs)
 # session_state defaults
 if 'df_out' not in st.session_state:
     st.session_state.df_out = None
@@ -41,9 +52,13 @@ if 'pdb_map' not in st.session_state:
 
 
 ################################### SIDEBAR SETTINGS ##########################
+
 st.sidebar.header("Settings")
 target_chain = st.sidebar.text_input("Target Chain Letter", value="A")
 binder_chain = st.sidebar.text_input("Binder Chain Letter", value="B")
+dist_threshod = st.sidebar.number_input("Salt bridge/Hydrophobic contacts distance cut off (Å) ", value=4)
+check_box_family = st.sidebar.checkbox('In all designs, target protein is same', value = True)
+#max_dist_threshod = st.sidebar.number_input("Maximum atomic distance ", value=4)
 
 add_target_res_offset = st.sidebar.number_input("Target Residue Offset ", value=0)
 st.sidebar.markdown("##### (e.g. your Output  target chain starts from Residue 1 but your initial target chain, starts from 24. you should enter 23)")
@@ -59,15 +74,17 @@ st.sidebar.download_button(
     mime="text/plain"
 )
 mj = st.sidebar.header("App created by MJ Shadfar")
+st.sidebar.markdown("#### currently a PhD candidate in A/Prof Jane Allison’s group, School of Biological Science, University of Auckland. ")
+st.sidebar.caption(" [Linkedin Profile](https://www.linkedin.com/in/mohammadjavad-mj-shadfar-3919b5b8/)")
 st.sidebar.write(" [Github Repository](https://github.com/mj72git/PDB-Analyzer)")
-st.sidebar.caption("PDB Analyser v1.1.0")
+st.sidebar.caption("PDB Analyser v1.2.0")
 st.sidebar.caption("")
-st.sidebar.caption("The last modify : 22 May 2026")
+st.sidebar.caption("The last modify : 15 Sep 2026")
 
 ############################# FILE UPLOAD & ANALYSIS ########################
 if not st.session_state.analysis_done:
     st.subheader("")
-    st.subheader("This App is created for analysing pdb files generated from Protein Design software like AlphaFold or BindCraft.")
+    st.subheader("This App is created for analysing pdb files generated from Protein Design software like AlphaFold or BindCraft. (Only pdb files with target & binder) ")
     #st.subheader("")
     st.image('image.jpg', width = 500)
     st.subheader("")
@@ -94,7 +111,7 @@ if not st.session_state.analysis_done:
                     f.write(pdb.read())
 
                 r = analyze_design(pdb_path, target_chain=target_chain, binder_chain=binder_chain,
-                                   add_target_res_offset=add_target_res_offset,tmpdir=tmpdir)
+                                   add_target_res_offset=add_target_res_offset,tmpdir=tmpdir, dist_threshod=dist_threshod)
 
                 #base = os.path.splitext(os.path.basename(pdb_path))[0]  #omitt the .pdb
                 #base = "_".join(base.split("_")[:-1]) #or os.path.splitext(os.path.basename(pdb_path))[0]
@@ -132,13 +149,14 @@ if not st.session_state.analysis_done:
                 #for col in ['Average_pLDDT','Average_i_pLDDT','Average_pTM','Average_i_pTM','Average_pAE','Average_i_pAE','Average_dG','Average_dSASA','Average_Binder_pLDDT','Average_n_InterfaceResidues']:
                     #record[col] = matched_row.get(col, np.nan)
                 record.update({
+                    'binder_length' : r.get('binder_length'),
                     'Average_pLDDT' : r.get('Average-pLDDT'),
-                    'Average_i_pLDDT' : r.get('Average-i-pLDDT'),
+                    #'Average_i_pLDDT' : r.get('Average-i-pLDDT'),
                     #'Average_binder_pLDDT' : r.get('Average-binder-pLDDT'),
-                    'n_contacts_3A': r.get('n_contacts_3A'),
-                    'n_contacts_4A': r.get('n_contacts_4A'),
-                    'n_target_interface_residues': r.get('n_target_interface_residues'),
-                    'n_binder_interface_residues': r.get('n_binder_interface_residues'),
+                    'n_contacts_3A_Atom': r.get('n_contacts_3A'),
+                    'n_contacts_4A_Atom': r.get('n_contacts_4A'),
+                    #'n_target_interface_residues': r.get('n_target_interface_residues'),
+                    #'n_binder_interface_residues': r.get('n_binder_interface_residues'),
                    # 'hbond_like_count': r.get('hbond_like_count'),
                    # 'clash_count': r.get('clash_count'),
                    # 'dsasa': r.get('dsasa'),
@@ -146,9 +164,21 @@ if not st.session_state.analysis_done:
                     'binder_seq': r.get('binder_seq'),
 
                     'pairs_3A': r.get('pairs_3A'),
+                    '3A_Residues': r.get('3A_Residues'),
+                    'n_contacts_3A_Residues' : r.get('n_contacts_3A_Residues'),
                     'pairs_4A': r.get('pairs_4A'),
+                    '4A_Residues': r.get('4A_Residues'),
+                    'n_contacts_4A_Residues': r.get('n_contacts_4A_Residues'),
                   #  'hbond_pairs': r.get('hbond_pairs')
-                    'hypho' : r.get('hypho')
+                    'hydrophobic_contacts' : r.get('hypho'),
+                    'n_hydrophobic_contacts_ATOM': r.get('n_hypho_list'),
+                    'hydrophobic_contacts_Residues' : r.get('hypho_Residues'),
+                    'n_hydrophobic_contacts_Residues' : r.get('number_hydrophobic_contacts_Residues'),
+                    'salt_bridge' : r.get('salt_bridge'),
+                    'n_salt_bridge_ATOM': r.get('n_salt_bridge'),
+                    'salt_bridge_contacts_Residues': r.get('salt_bridge_Residues'),
+                    'n_salt_bridge_Residues' : r.get('number_salt_bridge_Residues')
+
                 })
                 results.append(record)
                 progress.progress((i+1)/len(pdb_files))
@@ -158,26 +188,26 @@ if not st.session_state.analysis_done:
             #for col in ['Average_i_pTM','Average_dSASA','Average_pLDDT']:
                 #if col not in df_rank.columns:
                     #df_rank[col] = np.nan
-            st.session_state.df_rank = df_rank.sort_values(by=['n_contacts_3A','Average_pLDDT','Average_i_pLDDT','n_contacts_4A'], ascending=[False, False, False, False])
+            st.session_state.df_rank = df_rank.sort_values(by=['n_contacts_3A_Atom','Average_pLDDT','n_hydrophobic_contacts_ATOM','n_salt_bridge_ATOM','n_contacts_4A_Atom'], ascending=[False, False, False, False, False])
             st.session_state.analysis_done = True
             st.rerun()
 
 ############################ AFTER ANALYSIS ####################################
 
 if st.session_state.analysis_done and st.session_state.df_out is not None:
-    tab1, tab2, tab3 = st.tabs(["Summary", "Visualizations", "Details"])
+    tab1, tab2, tab3, tab4 = st.tabs(["Summary", "Visualizations", "Details", "Overall"])
 
     with tab1:
         st.subheader("Analysis Summary")
         df_display = st.session_state.df_out.copy()
-        for col in ['Average_pLDDT','Average_i_pLDDT','pairs_3A', 'pairs_4A', 'hypho']:
+        for col in ['binder_length','Average_pLDDT','pairs_3A', 'n_salt_bridge_Residues','n_contacts_3A_Residues','n_contacts_4A_Residue','pairs_4A', 'hydrophobic_contacts', 'salt_bridge']:
             if col in df_display.columns:
                 df_display[col] = df_display[col].apply(lambda x: str(x))
         st.dataframe(df_display)
 
         st.subheader("Ranked Designs")
         df_rank_display = st.session_state.df_rank.copy()
-        for col in ['Average_pLDDT','Average_i_pLDDT','pairs_3A', 'pairs_4A', 'hypho']:
+        for col in ['binder_length','Average_pLDDT','pairs_3A','n_salt_bridge_Residues','n_contacts_3A_Residues','n_contacts_4A_Residue', 'pairs_4A', 'hydrophobic_contacts', 'salt_bridge']:
             if col in df_rank_display.columns:
                 df_rank_display[col] = df_rank_display[col].apply(lambda x: str(x))
         st.dataframe(df_rank_display)
@@ -189,7 +219,7 @@ if st.session_state.analysis_done and st.session_state.df_out is not None:
         st.download_button("Download Summary CSV", st.session_state.df_out.to_csv(index=False), "summary.csv")
         st.download_button("Download Ranked CSV", st.session_state.df_rank.to_csv(index=False), "ranked.csv")
 
-######################################
+############################################################################################################################
     with tab2:
         st.subheader("Visualizations")
 
@@ -205,10 +235,10 @@ if st.session_state.analysis_done and st.session_state.df_out is not None:
             fig_contacts = px.bar(
                 df,
                 x='design_id',
-                y='n_contacts_3A',
+                y='n_contacts_3A_Residues',
                 title='Number of Contacts (3Å)'
             )
-            st.plotly_chart(fig_contacts, use_container_width=True)
+            st.plotly_chart(fig_contacts, use_container_width=False)
         else:
             st.info("No data to plot. Please run analysis first.")
 
@@ -217,7 +247,7 @@ if st.session_state.analysis_done and st.session_state.df_out is not None:
             fig_contacts = px.bar(
                 df,
                 x='design_id',
-                y='n_contacts_4A',
+                y='n_contacts_4A_Residues',
                 title='Number of Contacts (4Å)'
             )
             st.plotly_chart(fig_contacts, use_container_width=True)
@@ -350,7 +380,7 @@ if st.session_state.analysis_done and st.session_state.df_out is not None:
                 
                 components.html(view._make_html(), height=500, width=900)
 
-    #######################################
+############################################################################################################################
     with tab3:
         st.subheader("Per-Design Details")
         for _, row in st.session_state.df_out.iterrows():
@@ -364,17 +394,246 @@ if st.session_state.analysis_done and st.session_state.df_out is not None:
                # st.text(format_pairs(row['pairs_2A']))
                 st.write("------------------------------------------------------------------")
                 st.write("**Contacts (3Å)**")
-                st.write("***(Target Residues  ↔  binder residues)   (First column is target, second column is binder.)***")
-                st.text(format_pairs(row['pairs_3A']))
+                st.write("***(Target Residues  ↔  binder residues)***")
+                st.text(format_pairs_contacts_only(row['pairs_3A']))
                 #st.text(format_pairs_with_distance(row['pairs_3A'], pdb_text, target_chain, binder_chain, add_target_res_offset))
                 st.write("------------------------------------------------------------------")
+                st.write("**hydrophobic contacts**")
+                st.text(format_pairs(row['hydrophobic_contacts']))
+                st.write("------------------------------------------------------------------")
+                st.write("**Salt Bridge**")
+                st.text(format_pairs(row['salt_bridge']))
+                st.write("------------------------------------------------------------------")
+                st.write("------------------------------------------------------------------")
                 st.write("**Contacts (4Å)**")
-                st.write("***(Target Residues   ↔   binder residues)  (First column is target, second column is binder.)***")
-                st.text(format_pairs(row['pairs_4A']))
+                st.write("***(Target Residues   ↔   binder residues)***")
+                st.text(format_pairs_contacts_only(row['pairs_4A']))
                 #st.text(format_pairs_with_distance(row['pairs_4A'], pdb_text, target_chain, binder_chain, add_target_res_offset))
                 st.write("------------------------------------------------------------------")
-                st.write("**hydrophobic patches**")
-                st.text(format_pairs(row['hypho']))
+
+############################################################################################################################
+    with tab4:
+
+        if not check_box_family:
+            st.subheader("Comming Soon!")
+            pass
+        else:
+            st.subheader("Overall Analysis of Designs")
+
+
+
+
+            def analysis_final(df_col_name):
+                analysis_final = []
+                for _, row in st.session_state.df_out.iterrows():
+                    analysis_final.append(row[df_col_name])
+                analysis_final_one_dim = []
+                for i in range(len(analysis_final)):
+                    for j in range(len(analysis_final[i])):
+                        analysis_final_one_dim.append(analysis_final[i][j])
+
+                n = 1
+                dict_res = {}
+
+                for i in range(len(st.session_state.df_out['target_seq'][0])):
+                    dict_res[i + 1] = 0
+
+                for i in range(len(dict_res)):
+                    dict_res[i + 1] = analysis_final_one_dim.count(list(dict_res.keys())[i])
+
+                for i in range(len(dict_res)):
+                    if dict_res[i + 1] == 0:
+                        del dict_res[i + 1]
+                return dict_res
+
+
+
+
+
+            analysis_final_3A = analysis_final('3A_Residues')
+            analysis_final_4A = analysis_final('4A_Residues')
+            analysis_final_hydrophobic = analysis_final('hydrophobic_contacts_Residues')
+            analysis_final_salt_bridge = analysis_final('salt_bridge_contacts_Residues')
+
+            target_sequence = st.session_state.df_out['target_seq'][0]
+            one_to_three = {
+                "A": "ALA", "R": "ARG", "N": "ASN", "D": "ASP",
+                "C": "CYS", "Q": "GLN", "E": "GLU", "G": "GLY",
+                "H": "HIS", "I": "ILE", "L": "LEU", "K": "LYS",
+                "M": "MET", "F": "PHE", "P": "PRO", "S": "SER",
+                "T": "THR", "W": "TRP", "Y": "TYR", "V": "VAL",
+            }
+            #####################################################################################
+            # Frequency of target residues at the 3 Å interface
+
+            # Assumes target PDB numbering starts at 1.
+            # add_target_res_offset makes the numbering match the original CapRel sequence.
+            resname_by_resid = {
+                position + 1 : one_to_three.get(aa, "UNK")
+                for position, aa in enumerate(target_sequence)
+            }
+
+            # Sort residues numerically
+            sorted_items_3 = sorted(
+                ((int(resid), count) for resid, count in analysis_final_3A.items()),
+                key=lambda x: x[0]
+            )
+
+            resids = [(resid) for resid, _ in sorted_items_3]
+            counts = [count for _, count in sorted_items_3]
+
+            residue_labels = [f"{resid}    ({resname_by_resid.get(resid, 'UNK')})"
+                for resid in resids]
+
+            fig_contacts = px.bar(
+                x=residue_labels,
+                y=counts,
+                labels={"x": "Target residue number", "y": "Number of designs"},
+                title="Frequency of target residues at the 3 Å interface"
+            )
+
+            fig_contacts.update_xaxes(
+                type="category",
+                tickmode="array",
+                tickvals=residue_labels,
+                ticktext=residue_labels,
+                tickangle=-90,
+            )
+
+            fig_contacts.update_layout(
+                height=600,
+                margin=dict(b=140),
+            )
+
+            st.plotly_chart(fig_contacts, use_container_width=True)
+             #########################################################################
+            #Frequency of target residues at the 4 Å interface
+            # Sort residues numerically
+            sorted_items_4 = sorted(
+                ((int(resid), count) for resid, count in analysis_final_4A.items()),
+                key=lambda x: x[0]
+            )
+
+            resids4 = [(resid) for resid, _ in sorted_items_3]
+            counts4 = [count for _, count in sorted_items_3]
+
+            residue_labels4 = [f"{resid}    ({resname_by_resid.get(resid, 'UNK')})"
+                              for resid in resids4]
+
+            fig_contacts4 = px.bar(
+                x=residue_labels4,
+                y=counts4,
+                labels={"x": "Target residue number", "y": "Number of designs"},
+                title="Frequency of target residues at the 4 Å interface"
+            )
+
+            fig_contacts4.update_xaxes(
+                type="category",
+                tickmode="array",
+                tickvals=residue_labels4,
+                ticktext=residue_labels4,
+                tickangle=-90,
+            )
+
+            fig_contacts4.update_layout(
+                height=600,
+                margin=dict(b=140),
+            )
+
+            st.plotly_chart(fig_contacts4, use_container_width=True)
+
+            #st.write('Residues in 4A interface')
+            #st.write(analysis_final_4A)
+
+            #####################################################################################
+            #####################################################################################
+            # Frequency of target residues at the Hydrophobic contacts  4Å interface
+
+            # Assumes target PDB numbering starts at 1.
+            # add_target_res_offset makes the numbering match the original CapRel sequence.
+            resname_by_resid = {
+                position + 1: one_to_three.get(aa, "UNK")
+                for position, aa in enumerate(target_sequence)
+            }
+
+            # Sort residues numerically
+            sorted_items_hypho = sorted(
+                ((int(resid), count) for resid, count in analysis_final_hydrophobic.items()),
+                key=lambda x: x[0]
+            )
+
+            resids_hypho = [(resid) for resid, _ in sorted_items_hypho]
+            counts_hypho = [count for _, count in sorted_items_hypho]
+
+            residue_hypho_labels = [f"{resid}    ({resname_by_resid.get(resid, 'UNK')})"
+                              for resid in resids_hypho]
+
+            fig_contacts_hypho = px.bar(
+                x=residue_hypho_labels,
+                y=counts_hypho,
+                labels={"x": "Target residue number", "y": "Number of designs"},
+                title="Frequency of target residues at the Hydrophobic contacts at the interface"
+            )
+
+            fig_contacts_hypho.update_xaxes(
+                type="category",
+                tickmode="array",
+                tickvals=residue_hypho_labels,
+                ticktext=residue_hypho_labels,
+                tickangle=-90,
+            )
+
+            fig_contacts_hypho.update_layout(
+                height=600,
+                margin=dict(b=140),
+            )
+
+            st.plotly_chart(fig_contacts_hypho, use_container_width=True)
+
+            #####################################################################################
+            #####################################################################################
+            # Frequency of target residues at the salt bridge  4Å interface
+
+            # Assumes target PDB numbering starts at 1.
+            # add_target_res_offset makes the numbering match the original CapRel sequence.
+            resname_by_resid = {
+                position + 1: one_to_three.get(aa, "UNK")
+                for position, aa in enumerate(target_sequence)
+            }
+
+            # Sort residues numerically
+            sorted_items_salt_bridge = sorted(
+                ((int(resid), count) for resid, count in analysis_final_salt_bridge.items()),
+                key=lambda x: x[0]
+            )
+
+            resids_salt_bridge = [(resid) for resid, _ in sorted_items_salt_bridge]
+            counts_salt_bridge = [count for _, count in sorted_items_salt_bridge]
+
+            residue_salt_bridge_labels = [f"{resid}    ({resname_by_resid.get(resid, 'UNK')})"
+                                    for resid in resids_salt_bridge]
+
+            fig_contacts_salt_bridge = px.bar(
+                x=residue_salt_bridge_labels,
+                y=counts_salt_bridge,
+                labels={"x": "Target residue number", "y": "Number of designs"},
+                title="Frequency of target residues at the salt bridge at the interface"
+            )
+
+            fig_contacts_salt_bridge.update_xaxes(
+                type="category",
+                tickmode="array",
+                tickvals=residue_salt_bridge_labels,
+                ticktext=residue_salt_bridge_labels,
+                tickangle=-90,
+            )
+
+            fig_contacts_salt_bridge.update_layout(
+                height=600,
+                margin=dict(b=140),
+            )
+
+            st.plotly_chart(fig_contacts_salt_bridge, use_container_width=True)
 
 
 
