@@ -111,7 +111,7 @@ if not st.session_state.analysis_done:
                     f.write(pdb.read())
 
                 r = analyze_design(pdb_path, target_chain=target_chain, binder_chain=binder_chain,
-                                   add_target_res_offset=add_target_res_offset,tmpdir=tmpdir)
+                                   add_target_res_offset=add_target_res_offset,tmpdir=tmpdir,dist_threshod=4)
 
                 #base = os.path.splitext(os.path.basename(pdb_path))[0]  #omitt the .pdb
                 #base = "_".join(base.split("_")[:-1]) #or os.path.splitext(os.path.basename(pdb_path))[0]
