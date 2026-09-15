@@ -56,7 +56,7 @@ if 'pdb_map' not in st.session_state:
 st.sidebar.header("Settings")
 target_chain = st.sidebar.text_input("Target Chain Letter", value="A")
 binder_chain = st.sidebar.text_input("Binder Chain Letter", value="B")
-dist_threshod = st.sidebar.number_input("Salt bridge/Hydrophobic contacts distance cut off (Å) ", value=4)
+#dist_threshod = st.sidebar.number_input("Salt bridge/Hydrophobic contacts distance cut off (Å) ", value=4)
 check_box_family = st.sidebar.checkbox('In all designs, target protein is same', value = True)
 #max_dist_threshod = st.sidebar.number_input("Maximum atomic distance ", value=4)
 
@@ -111,7 +111,7 @@ if not st.session_state.analysis_done:
                     f.write(pdb.read())
 
                 r = analyze_design(pdb_path, target_chain=target_chain, binder_chain=binder_chain,
-                                   add_target_res_offset=add_target_res_offset,tmpdir=tmpdir, dist_threshod=dist_threshod)
+                                   add_target_res_offset=add_target_res_offset,tmpdir=tmpdir)
 
                 #base = os.path.splitext(os.path.basename(pdb_path))[0]  #omitt the .pdb
                 #base = "_".join(base.split("_")[:-1]) #or os.path.splitext(os.path.basename(pdb_path))[0]
