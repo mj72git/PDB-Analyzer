@@ -77,7 +77,7 @@ mj = st.sidebar.header("App created by MJ Shadfar")
 st.sidebar.markdown("#### currently a PhD candidate in A/Prof Jane Allison’s group, School of Biological Science, University of Auckland. ")
 st.sidebar.caption(" [Linkedin Profile](https://www.linkedin.com/in/mohammadjavad-mj-shadfar-3919b5b8/)")
 st.sidebar.write(" [Github Repository](https://github.com/mj72git/PDB-Analyzer)")
-st.sidebar.caption("PDB Analyser v1.2.0")
+st.sidebar.caption("PDB Analyser v1.2.1")
 st.sidebar.caption("")
 st.sidebar.caption("The last modify : 15 Sep 2026")
 
@@ -253,6 +253,32 @@ if st.session_state.analysis_done and st.session_state.df_out is not None:
             st.plotly_chart(fig_contacts, use_container_width=True)
         else:
             st.info("No data to plot. Please run analysis first.")
+
+        st.write("------------------------------------------------------------------------------------------")
+        if df is not None and df.shape[0] > 0:
+            fig_contacts = px.bar(
+                df,
+                x='design_id',
+                y='n_hydrophobic_contacts_Residues',
+                title='Number of hydrophobic Contacts '
+            )
+            st.plotly_chart(fig_contacts, use_container_width=True)
+        else:
+            st.info("No data to plot. Please run analysis first.")
+
+        st.write("------------------------------------------------------------------------------------------")
+        if df is not None and df.shape[0] > 0:
+            fig_contacts = px.bar(
+                df,
+                x='design_id',
+                y='n_salt_bridge_Residues',
+                title='Number of salt bridge contacts '
+            )
+            st.plotly_chart(fig_contacts, use_container_width=True)
+        else:
+            st.info("No data to plot. Please run analysis first.")
+
+
 
 
         # -------------------------------
