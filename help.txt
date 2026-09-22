@@ -1,4 +1,4 @@
-PDB Analyzer (v1.2.1) 
+PDB Analyzer (v1.3.1) 
 
 It is a Streamlit-based web application for analyzing pdb files, exploring interface metrics, and visualizing 3D protein structures.
 
@@ -8,7 +8,7 @@ Step 2: Clarify the residue numbering offset between the initial target PDB and 
 
 Step 3: Upload the PDB files.
 
- After a while, the app provides four tabs: 
+ After a while, the app provides seven tabs: 
 
 1. Summary:
  - Displays all analysed results in an interactive table.  
@@ -16,7 +16,7 @@ Step 3: Upload the PDB files.
 2. Visualisations: 
  - Interactive 3D structure viewer using py3Dmol. 
  - Customizable chain colouring. 
- - Counts and plots the number of 3 Å, 4 Å contacts and also hydrophobic contacts and salt bridge between binder and target for each design. 
+ - Counts and plots the number of 3 Å, 4 Å contacts, hydrophobic contacts and salt bridge and H bonds between binder and target for each design. 
 
 3. Details: 
  - For each design, you can inspect: 
@@ -24,9 +24,23 @@ Step 3: Upload the PDB files.
       • Residue–residue contact pairs (3 Å and 4 Å) and distance 
       • Salt bridges
       • Hydrophobic contacts
+	 • H bonds
+	 • Pi_Pi contacts
+      • Cation_Pi contacts
+		
 
-4. Overall:
- - Displays Frequency of target residues at interface (3 Å, 4 Å, hydrophobic contacts & salt bridge) .  
+4. Binder Analysis:
+ - For each designed binder, you can inspect:
+	• Binder length & Sequence.
+	• Hydrophobicity Analysis.
+ 
+5. Binder Analysis Overall:
+ Displays Hydrophobicity, Acidic & Basic Percentages of all designed binders .  
 
+6. Overall:
+Displays Frequency of target residues at interface (3 Å, 4 Å, hydrophobic contacts & salt bridge) .
+
+7. Filters (Customization)
+You can choose your best designs based on your customized filters
 
 Author: MJ Shadfar

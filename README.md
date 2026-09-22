@@ -33,7 +33,7 @@ https://pdbanalyzermjshadfar.streamlit.app/
 - Interactive **3D structure viewer** using *py3Dmol*
 - Customizable chain coloring  
 - Counts and plots the number of **3 Å and 4 Å contacts** between binder and target  
-
+- Counts and plots the number of hydrophobic contacts and salt bridge and H bonds between binder and target for each design.
 ---
 
 ### ✅ 3. Details Tab
@@ -44,8 +44,27 @@ For each design, you can inspect:
 
 ---
 
-### ✅ 4. Overall Tab
-- Displays Frequency of target residues at interface (3 Å, 4 Å, hydrophobic contacts & salt bridge)
+### ✅ 4. Binder Analysis:
+For each designed binder, you can inspect:
+- Binder length & Sequence.
+- Hydrophobicity Analysis.
+
+
+---
+
+
+### ✅ 5. Binder Analysis Overall:
+Displays Hydrophobicity, Acidic & Basic Percentages of all designed binders .  
+
+---
+
+### ✅ 6. Overall Tab
+Displays Frequency of target residues at interface (3 Å, 4 Å, hydrophobic contacts & salt bridge)
+
+---
+
+### ✅ 7. Filters (Customisation)
+You can choose your best designs based on your customised filters.
 
 ---
 

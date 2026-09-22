@@ -21,7 +21,8 @@ from helper import *
 st.set_page_config(page_title="PDB Analyser", layout="wide")
 st.image('uoa.jpg', width=200)
 st.title("PDB Analyser Web Application")
-
+################################################################################
+################################################################################
 def format_pairs(pairs):
     if not pairs or pairs == 'nan':
         return "None"
@@ -42,11 +43,49 @@ def format_pairs_contacts_only(pairs):
 
     except Exception:
         return str(pairs)
+
+def format_pairs_h_bonds_b_to_t(pairs):
+    if not pairs or pairs == 'nan':
+        return "None"
+    try:
+        return " ".join([f" {a['donor'][0]} {a['donor'][1]} ({a['donor'][2]})    ->    {a['acceptor'][0]} {a['acceptor'][1]} ({a['acceptor'][2]})    |    distance = {a['distance_A']} Å    |    Angle = {a['angle_deg']}  degree  \n" for a in pairs])
+    except Exception:
+        return str(pairs)
+
+def format_pairs_h_bonds_t_to_b(pairs):
+    if not pairs or pairs == 'nan':
+        return "None"
+    try:
+        return " ".join([f" {a['donor'][0]} {a['donor'][1]} ({a['donor'][2]})    ->    {a['acceptor'][0]} {a['acceptor'][1]} ({a['acceptor'][2]})    |    distance = {a['distance_A']} Å     |    Angle = {a['angle_deg']}  degree  \n" for a in pairs])
+    except Exception:
+        return str(pairs)
+
+
+def format_pairs_pi_pi(pairs):
+    if not pairs or pairs == 'nan':
+        return "None"
+    try:
+        return " ".join([f" (target)  {a['target']}   ->     (binder)  {a['binder']}  |  distance = {round(a['distance_A'],2)} Å  |  offset = {a['offset_A']} | angle = {a['angle_deg']} degree  |  geometry = {a['geometry']}  \n" for a in pairs])
+    except Exception:
+        return str(pairs)
+
+def format_pairs_cation_pi(pairs):
+    if not pairs or pairs == 'nan':
+        return "None"
+    try:
+        return " ".join([f" Cation : {a['cation']}   ->   Aromatic : {a['aromatic']}  |  distance = {round(a['distance_A'],2)} Å  |  offset = {a['offset_A']} | angle = {a['theta_deg']} degree \n" for a in pairs])
+    except Exception:
+        return str(pairs)
+################################################################################
+################################################################################
+
 # session_state defaults
 if 'df_out' not in st.session_state:
     st.session_state.df_out = None
 if 'df_rank' not in st.session_state:
     st.session_state.df_rank = None
+if "df_final" not in st.session_state:
+  st.session_state.df_final = None
 if 'pdb_map' not in st.session_state:
     st.session_state.pdb_map = {}
 
@@ -75,11 +114,20 @@ st.sidebar.download_button(
 )
 mj = st.sidebar.header("App created by MJ Shadfar")
 st.sidebar.markdown("#### currently a PhD candidate in A/Prof Jane Allison’s group, School of Biological Science, University of Auckland. ")
-st.sidebar.caption(" [Linkedin Profile](https://www.linkedin.com/in/mohammadjavad-mj-shadfar-3919b5b8/)")
+st.sidebar.caption(" [Linkedin Profile](https://www.linkedin.com/in/mj-shadfar-3919b5b8/)")
 st.sidebar.write(" [Github Repository](https://github.com/mj72git/PDB-Analyzer)")
 st.sidebar.caption("PDB Analyser v1.2.1")
 st.sidebar.caption("")
 st.sidebar.caption("The last modify : 15 Sep 2026")
+# st.table(
+#     {
+#         ":material/folder: Project": "**Streamlit** - The fastest way to build data apps",
+#         ":material/code: Repository": "[github.com/streamlit/streamlit](https://github.com/streamlit/streamlit)",
+#         ":material/new_releases: Version": ":gray-badge[1.45.0]",
+#         ":material/license: License": ":green-badge[Apache 2.0]",
+#         ":material/group: Maintainers": ":blue-badge[Core Team] :violet-badge[Community]",
+#     },
+#     border="horizontal")
 
 ############################# FILE UPLOAD & ANALYSIS ########################
 if not st.session_state.analysis_done:
@@ -161,8 +209,6 @@ if not st.session_state.analysis_done:
                    # 'clash_count': r.get('clash_count'),
                    # 'dsasa': r.get('dsasa'),
                     'target_seq': r.get('target_seq'),
-                    'binder_seq': r.get('binder_seq'),
-
                     'pairs_3A': r.get('pairs_3A'),
                     '3A_Residues': r.get('3A_Residues'),
                     'n_contacts_3A_Residues' : r.get('n_contacts_3A_Residues'),
@@ -177,7 +223,31 @@ if not st.session_state.analysis_done:
                     'salt_bridge' : r.get('salt_bridge'),
                     'n_salt_bridge_ATOM': r.get('n_salt_bridge'),
                     'salt_bridge_contacts_Residues': r.get('salt_bridge_Residues'),
-                    'n_salt_bridge_Residues' : r.get('number_salt_bridge_Residues')
+                    'n_salt_bridge_Residues' : r.get('number_salt_bridge_Residues'),
+                    'pi_pi_contacts' : r.get('pi_pi_contacts'),
+                    'n_pi_pi_contacts' : r.get('n_pi_pi_contacts'),
+                    'cation_pi_contacts' : r.get('cation_pi_contacts'),
+                    'n_cation_pi_contacts' : r.get('n_cation_pi_contacts'),
+                    'hbonds_target_to_binder' : r.get('hbonds_target_to_binder'),
+                    'hbonds_binder_to_target' : r.get('hbonds_binder_to_target'),
+                    'Number of All H bonds' : r.get('Number of All H bonds'),
+                    'binder_seq': r.get('binder_seq'),
+                    'binder_hydrophobic_res': r.get('hydrophobic_res'),
+                    'binder_hydrophobic_res_fraction': r.get('hydrophobic_res_fraction'),
+                    'binder_hydrophobic_res_interface': r.get('hydrophobic_res_interface'),
+                    'binder_hydrophobic_res_fraction_interface': r.get('hydrophobic_res_fraction_interface'),
+                    'binder_positive_res': r.get('positive_res'),
+                    'binder_positive_res_fraction': r.get('positive_res_fraction'),
+                    'binder_positive_res_interface': r.get('positive_res_interface'),
+                    'binder_positive_res_fraction_interface': r.get('positive_res_fraction_interface'),
+                    'binder_negative_res': r.get('negative_res'),
+                    'binder_negative_res_fraction': r.get('negative_res_fraction'),
+                    'binder_negative_res_interface': r.get('negative_res_interface'),
+                    'binder_negative_res_fraction_interface': r.get('negative_res_fraction_interface'),
+                    'binder_aromatic_res': r.get('aromatic_res'),
+                    'binder_aromatic_res_fraction': r.get('aromatic_res_fraction'),
+                    'binder_aromatic_res_interface': r.get('aromatic_res_interface'),
+                    'binder_aromatic_res_fraction_interface': r.get('aromatic_res_fraction_interface')
 
                 })
                 results.append(record)
@@ -195,19 +265,33 @@ if not st.session_state.analysis_done:
 ############################ AFTER ANALYSIS ####################################
 
 if st.session_state.analysis_done and st.session_state.df_out is not None:
-    tab1, tab2, tab3, tab4 = st.tabs(["Summary", "Visualizations", "Details", "Overall"])
-
+    tab1, tab2, tab3, tab4, tab5, tab6, tab7 = st.tabs(["Summary", "Visualizations", "Details", "Binder Analysis",
+                                                        "Binder Analysis Overall","Overall", "Filters (Customization)"])
+############################################################################################################################
+############################################################################################################################
+############################################################################################################################
     with tab1:
         st.subheader("Analysis Summary")
         df_display = st.session_state.df_out.copy()
-        for col in ['binder_length','Average_pLDDT','pairs_3A', 'n_salt_bridge_Residues','n_contacts_3A_Residues','n_contacts_4A_Residue','pairs_4A', 'hydrophobic_contacts', 'salt_bridge']:
+        for col in ['binder_length','binder_hydrophobic_res','binder_hydrophobic_res_fraction','binder_hydrophobic_res_interface','binder_hydrophobic_res_fraction_interface',
+                    'binder_positive_res','binder_positive_res_fraction', 'binder_positive_res_interface','binder_positive_res_fraction_interface','binder_negative_res','binder_negative_res_fraction',
+                    'binder_negative_res_interface','binder_negative_res_fraction_interface','hbonds_target_to_binder','hbonds_binder_to_target',
+                    'binder_aromatic_res','binder_aramotic_res_fraction','binder_aromatic_res_interface', 'binder_aromatic_res_fraction_interface','Average_pLDDT','pairs_3A', 'n_salt_bridge_Residues','n_contacts_3A_Residues','n_contacts_4A_Residue','pairs_4A', 'hydrophobic_contacts', 'salt_bridge', 'pi_pi_contacts', 'cation_pi_contacts']:
             if col in df_display.columns:
                 df_display[col] = df_display[col].apply(lambda x: str(x))
         st.dataframe(df_display)
 
         st.subheader("Ranked Designs")
         df_rank_display = st.session_state.df_rank.copy()
-        for col in ['binder_length','Average_pLDDT','pairs_3A','n_salt_bridge_Residues','n_contacts_3A_Residues','n_contacts_4A_Residue', 'pairs_4A', 'hydrophobic_contacts', 'salt_bridge']:
+        for col in ['binder_length', 'binder_hydrophobic_res', 'binder_hydrophobic_res_fraction',
+                    'binder_hydrophobic_res_interface', 'binder_hydrophobic_res_fraction_interface',
+                    'binder_positive_res', 'binder_positive_res_fraction', 'binder_positive_res_interface',
+                    'binder_positive_res_fraction_interface', 'binder_negative_res', 'binder_negative_res_fraction',
+                    'binder_negative_res_interface', 'binder_negative_res_fraction_interface','hbonds_target_to_binder','hbonds_binder_to_target',
+                    'binder_aromatic_res', 'binder_aramotic_res_fraction', 'binder_aromatic_res_interface',
+                    'binder_aromatic_res_fraction_interface', 'Average_pLDDT', 'pairs_3A', 'n_salt_bridge_Residues',
+                    'n_contacts_3A_Residues', 'n_contacts_4A_Residue', 'pairs_4A', 'hydrophobic_contacts',
+                    'salt_bridge', 'pi_pi_contacts', 'cation_pi_contacts']:
             if col in df_rank_display.columns:
                 df_rank_display[col] = df_rank_display[col].apply(lambda x: str(x))
         st.dataframe(df_rank_display)
@@ -219,6 +303,8 @@ if st.session_state.analysis_done and st.session_state.df_out is not None:
         st.download_button("Download Summary CSV", st.session_state.df_out.to_csv(index=False), "summary.csv")
         st.download_button("Download Ranked CSV", st.session_state.df_rank.to_csv(index=False), "ranked.csv")
 
+############################################################################################################################
+############################################################################################################################
 ############################################################################################################################
     with tab2:
         st.subheader("Visualizations")
@@ -278,7 +364,41 @@ if st.session_state.analysis_done and st.session_state.df_out is not None:
         else:
             st.info("No data to plot. Please run analysis first.")
 
+        st.write("------------------------------------------------------------------------------------------")
+        if df is not None and df.shape[0] > 0:
+            fig_contacts_pi_pi = px.bar(
+                df,
+                x='design_id',
+                y='n_pi_pi_contacts',
+                title='Number of Pi_Pi contacts '
+            )
+            st.plotly_chart(fig_contacts_pi_pi, use_container_width=True)
+        else:
+            st.info("No data to plot. Please run analysis first.")
 
+        st.write("------------------------------------------------------------------------------------------")
+        if df is not None and df.shape[0] > 0:
+            fig_contacts_cation_pi = px.bar(
+                df,
+                x='design_id',
+                y='n_cation_pi_contacts',
+                title='Number of Cation_Pi contacts '
+            )
+            st.plotly_chart(fig_contacts_cation_pi, use_container_width=True)
+        else:
+            st.info("No data to plot. Please run analysis first.")
+
+        st.write("------------------------------------------------------------------------------------------")
+        if df is not None and df.shape[0] > 0:
+            fig_contacts_hb = px.bar(
+                df,
+                x='design_id',
+                y='Number of All H bonds',
+                title='Number of all H bonds '
+            )
+            st.plotly_chart(fig_contacts_hb, use_container_width=True)
+        else:
+            st.info("No data to plot. Please run analysis first.")
 
 
         # -------------------------------
@@ -407,6 +527,8 @@ if st.session_state.analysis_done and st.session_state.df_out is not None:
                 components.html(view._make_html(), height=500, width=900)
 
 ############################################################################################################################
+############################################################################################################################
+############################################################################################################################
     with tab3:
         st.subheader("Per-Design Details")
         for _, row in st.session_state.df_out.iterrows():
@@ -415,9 +537,19 @@ if st.session_state.analysis_done and st.session_state.df_out is not None:
                 st.text(f"Target: {row['target_seq']}")
                 st.text(f"Binder: {row['binder_seq']}")
                 pdb_text = st.session_state.pdb_map[row['design_id']]
+                st.text('')
                 #d = format_pairs_with_distance(row['pairs_3A'], pdb_text)
                 #st.write("**Contacts (2Å)**")
                # st.text(format_pairs(row['pairs_2A']))
+                st.write("**H-bonds**")
+                #st.text(f"hbonds_target_to_binder : {row['hbonds_target_to_binder']}")
+                st.write("***Target -> Binder***")
+                st.text(format_pairs_h_bonds_t_to_b(row['hbonds_target_to_binder']))
+                st.text('')
+                st.write("***Binder -> Target***")
+                st.text(format_pairs_h_bonds_b_to_t(row['hbonds_binder_to_target']))
+
+                #st.text(f"hbonds_binder_to_target : {row['hbonds_binder_to_target']}")
                 st.write("------------------------------------------------------------------")
                 st.write("**Contacts (3Å)**")
                 st.write("***(Target Residues  ↔  binder residues)***")
@@ -430,15 +562,102 @@ if st.session_state.analysis_done and st.session_state.df_out is not None:
                 st.write("**Salt Bridge**")
                 st.text(format_pairs(row['salt_bridge']))
                 st.write("------------------------------------------------------------------")
+                st.write("**pi_pi_contacts**")
+                st.text(format_pairs_pi_pi(row['pi_pi_contacts']))
+                #st.text(row['pi_pi_contacts'])
+                st.write("------------------------------------------------------------------")
+                st.write("**cation_pi_contacts**")
+                st.text(format_pairs_cation_pi(row['cation_pi_contacts']))
+                st.text(row['cation_pi_contacts'])
+                st.write("------------------------------------------------------------------")
                 st.write("------------------------------------------------------------------")
                 st.write("**Contacts (4Å)**")
                 st.write("***(Target Residues   ↔   binder residues)***")
                 st.text(format_pairs_contacts_only(row['pairs_4A']))
                 #st.text(format_pairs_with_distance(row['pairs_4A'], pdb_text, target_chain, binder_chain, add_target_res_offset))
                 st.write("------------------------------------------------------------------")
-
+############################################################################################################################
+############################################################################################################################
 ############################################################################################################################
     with tab4:
+        st.subheader("Per-Binder Details")
+        for _, row in st.session_state.df_out.iterrows():
+            with st.expander(f"Details for {row['design_id']} -----Binder only"):
+                st.write('**Sequence**')
+                st.text(f" {row['binder_seq']}")
+                st.text(f"length: {row['binder_length']}")
+                st.write("------------------------------------------------------------------")
+                st.write('**Hydrophobicity/Hydrophilicity Analysis (All aa of the binder):**')
+                st.text(f"Hydrophobic: {row['binder_hydrophobic_res_fraction']} %")
+                st.text(f"Basic: {row['binder_positive_res_fraction']} %")
+                st.text(f"Acidic: {row['binder_negative_res_fraction']} %")
+                st.text(f"Aromatic: {row['binder_aromatic_res_fraction']} %")
+                st.write("------------------------------------------------------------------")
+                st.write('**Hydrophobicity/Hydrophilicity Analysis (Interface Only):**')
+                st.text(f"Hydrophobic: {row['binder_hydrophobic_res_fraction_interface']} %")
+                st.text(f"Basic: {row['binder_positive_res_fraction_interface']} %")
+                st.text(f"Acidic: {row['binder_negative_res_fraction_interface']} %")
+                st.text(f"Aromatic: {row['binder_aromatic_res_fraction_interface']} %")
+
+############################################################################################################################
+############################################################################################################################
+############################################################################################################################
+    with tab5:
+        st.subheader("Binder Analysis Overall")
+
+        # ensure df is defined
+        df = st.session_state.df_out
+
+        # -------------------------------
+        # BAR PLOT (4Å contacts)
+        # -------------------------------
+
+
+        if df is not None and df.shape[0] > 0:
+            fig_contacts_h = px.bar(
+                df,
+                x='design_id',
+                y='binder_hydrophobic_res_fraction',
+                title='Binder Hydrophobicity for all designs (%)'
+            )
+            st.plotly_chart(fig_contacts_h, use_container_width=False)
+        else:
+            st.info("No data to plot. Please run analysis first.")
+
+        st.write("------------------------------------------------------------------------------------------")
+        if df is not None and df.shape[0] > 0:
+            fig_contacts_bc = px.bar(
+                df,
+                x='design_id',
+                y='binder_positive_res_fraction',
+                title='Binder Basic Residues for all designs (%)'
+            )
+            st.plotly_chart(fig_contacts_bc, use_container_width=True)
+        else:
+            st.info("No data to plot. Please run analysis first.")
+
+        st.write("------------------------------------------------------------------------------------------")
+
+        if df is not None and df.shape[0] > 0:
+            fig_contacts_ac = px.bar(
+                df,
+                x='design_id',
+                y='binder_negative_res_fraction',
+                title='Binder Acidic Residues for all designs (%)'
+            )
+            st.plotly_chart(fig_contacts_ac, use_container_width=True)
+        else:
+            st.info("No data to plot. Please run analysis first.")
+
+        st.write("------------------------------------------------------------------------------------------")
+
+
+
+
+############################################################################################################################
+############################################################################################################################
+############################################################################################################################
+    with tab6:
 
         if not check_box_family:
             st.subheader("Comming Soon!")
@@ -660,6 +879,88 @@ if st.session_state.analysis_done and st.session_state.df_out is not None:
             )
 
             st.plotly_chart(fig_contacts_salt_bridge, use_container_width=True)
+
+############################################################################################################################
+############################################################################################################################
+############################################################################################################################
+
+    with tab7:
+        st.subheader("Filter your designs")
+        col1, col2 = st.columns([1, 2])
+        with col1:
+
+            st.markdown("##### Designs Filtered by Selected Metric(s)")
+            filters = ['Average_pLDDT', 'n_contacts_3A_Residues', 'n_contacts_4A_Residues',
+                       'Number of All H bonds','n_hydrophobic_contacts_ATOM', 'n_hydrophobic_contacts_Residues',
+                       'n_salt_bridge_ATOM', 'n_salt_bridge_Residues', 'n_pi_pi_contacts', 'n_cation_pi_contacts', 'binder_hydrophobic_res_fraction',
+                       'binder_hydrophobic_res_fraction_interface', 'binder_positive_res_fraction', 'binder_positive_res_fraction_interface',
+                       'binder_negative_res_fraction','binder_negative_res_fraction_interface','binder_aromatic_res_fraction',
+                       'binder_aromatic_res_fraction_interface']
+            # cutoffs = [0.9, 0.8, 0.7, 0.5, 0.7, 0.2, 0.13, -70]
+            # aa = []
+
+            # final_filters = dict(zip(filters,cutoffs))
+            df_final = st.session_state.df_out.copy()
+
+            for filter in filters:
+                show_filter = st.checkbox(filter, value=False)
+                df_final[filter] = pd.to_numeric(df_final[filter], errors='coerce')
+                if show_filter:
+                    if ('pLDDT' in filter):
+                        cutoff = st.slider("choose your cutoff (%) : ", 0, 100, 70, key=f"slider_{filter}")
+                        cutoff = cutoff / 100
+                        df_final = df_final[df_final[filter] >= cutoff]
+
+                    elif ('fraction' in filter):
+                        cutoff = st.slider("Choose your cutoff (%)  : ", 0, 100, 5, key=f"slider_{filter}")
+                        #cutoff = cutoff / 100
+                        # aa.append(cutoff)
+                        df_final = df_final[df_final[filter] >= cutoff]
+
+
+                    elif ('3A' in filter) or ('4A' in filter):
+                        cutoff = st.slider("Choose your cutoff   : ", 0, 100, 5, key=f"slider_{filter}")
+                        df_final = df_final[df_final[filter] >= cutoff]
+
+                    elif ('pi_contacts' in filter):
+                        cutoff = st.slider("Choose your cutoff   : ", 0, 10, 0, key=f"slider_{filter}")
+                        df_final = df_final[df_final[filter] >= cutoff]
+
+                    elif ('binder' in filter):
+                        cutoff = st.slider("Choose your cutoff (%)   : ", 0, 100, 5, key=f"slider_{filter}")
+                        df_final = df_final[df_final[filter] >= cutoff]
+
+
+                    elif (filter == 'n_hydrophobic_contacts_ATOM') or (filter == 'n_hydrophobic_contacts_Residues') or (filter == 'n_salt_bridge_ATOM') or (filter ==  'n_salt_bridge_Residues'):
+                        cutoff = st.slider("Choose your cutoff   : ", 0, 100, 5, key=f"slider_{filter}")
+                        df_final = df_final[df_final[filter] >= cutoff]
+
+                    elif "H bonds" in filter:
+                        cutoff = st.slider("Choose your cutoff   : ", 0, 20, 1, key=f"slider_{filter}")
+                        df_final = df_final[df_final[filter] >= cutoff]
+                   
+
+        with col2:
+            st.markdown("##### Recommended designs based on filters: ")
+            #for c in ['pairs_3A', 'pairs_4A', 'hydrophobic_contacts']:
+            for c in df_final.columns:
+                if c in df_final.columns:
+                    df_final[c] = df_final[c].astype(str)
+            # Save to session state so Streamlit tracks it
+            st.session_state.df_final = df_final
+            st.dataframe(df_final)
+            #df_final
+            if st.session_state.df_final is not None:
+                st.download_button(
+                    label="Download Filtered CSV",
+                    data=st.session_state.df_final.to_csv(index=False),
+                    file_name="Filtered_Designs.csv",
+                    mime="text/csv",
+                )
+            #st.download_button("Download Ranked CSV", st.session_state.df_rank.to_csv(index=False), "ranked.csv")
+
+
+
 
 
 

@@ -43,24 +43,6 @@ def parse_freesasa_total(txt_path):
     return None
 
 
-# ----------------------------- Analysis helpers -----------------------------
-
-#def residue_contacts(target_atoms, binder_atoms, cutoff=4.0, add_target_res_offset=0):
-   # """Return sorted list of contacting residue pairs (target_resid, target_resname), (binder_resid, binder_resname).
-   # target_atoms and binder_atoms are MDAnalysis AtomGroup (non-hydrogen recommended).
- #   add_target_res_offset: if your PDB target residue numbering was shifted and you want to add an offset (e.g. +23).
-  #  """
-  #  if len(target_atoms) == 0 or len(binder_atoms) == 0:
-    #    return []
-   # d = distances.distance_array(target_atoms.positions, binder_atoms.positions)
-    #i, j = np.where(d <= cutoff)
-    #pairs = set()
-    #for a, b in zip(i, j):
-        #resA = (int(target_atoms[a].resid + add_target_res_offset), target_atoms[a].resname)
-       # resB = (int(binder_atoms[b].resid), binder_atoms[b].resname)
-       # pairs.add((resA, resB))
-    #return sorted(pairs, key=lambda x: (x[0][0], x[1][0]))
-
 def residue_contacts(target_atoms, binder_atoms, cutoff=4.0, add_target_res_offset=0):
     """
     Returns:
@@ -107,9 +89,9 @@ def residue_contacts(target_atoms, binder_atoms, cutoff=4.0, add_target_res_offs
 
     sorted_contacts = sorted(list(pairs), key=lambda x: (x[0][0], x[1][0]))
     return sorted_contacts
-#######
-#######
 
+#######
+#######
 
 
 def analyze_interactions(target_atoms, binder_atoms, add_target_res_offset=0,
@@ -164,10 +146,6 @@ def analyze_interactions(target_atoms, binder_atoms, add_target_res_offset=0,
     # 2. HYDROPHOBIC CONTACTS (Checked specifically between sidechain non-polar carbons)
     # -------------------------------------------------------------
     # Exclude backbone atoms (N, C, O, CA) to only measure true hydrophobic sidechain contacts
-    #target_hydro = target_atoms.select_atoms("resname VAL ILE LEU PHE MET TRP ALA PRO and not name N C O CA H* [0-9]H*")
-    #binder_hydro = binder_atoms.select_atoms("resname VAL ILE LEU PHE MET TRP ALA PRO and not name N C O CA H* [0-9]H*")
-    #target_hydro = target_atoms.select_atoms("resname VAL ILE LEU PHE MET TRP ALA PRO and not name N C O CA and not element H")
-    #binder_hydro = binder_atoms.select_atoms("resname VAL ILE LEU PHE MET TRP ALA PRO and not name N C O CA and not element H")
     
     HYDROPHOBIC_AAS = "VAL ILE LEU PHE MET TRP ALA PRO"
     HYDROPHOBIC_ATOMS = "CB CG* CD* CE* CZ* CH* SD"
@@ -195,63 +173,154 @@ def analyze_interactions(target_atoms, binder_atoms, add_target_res_offset=0,
     sorted_patches = sorted(list(hydrophobic_patches), key=lambda x: (x[0][0], x[1][0]))
     sorted_salt_bridges = sorted(list(salt_bridges), key=lambda x: (x[0][0], x[1][0]))
 
-    # print("Target hydrophobic atoms:", len(target_hydro), target_hydro.names[:20])
-    # print("Binder hydrophobic atoms:", len(binder_hydro), binder_hydro.names[:20])
-    # print("Minimum distance:", distances.distance_array(
-    #     target_hydro.positions, binder_hydro.positions
-    # ).min())
-
-
-
     return sorted_patches, sorted_salt_bridges
 
+################################################################################################################
+
+######################       pi-pi & cation-pi
+
+def get_ring_geometry(res):
+    """Calculates geometric centroid, normal vector, and residue info for aromatic rings."""
+    AROMATIC_RINGS = {
+        'PHE': ['CG', 'CD1', 'CD2', 'CE1', 'CE2', 'CZ'],
+        'TYR': ['CG', 'CD1', 'CD2', 'CE1', 'CE2', 'CZ'],
+        'TRP': ['CG', 'CD1', 'CD2', 'NE1', 'CE2', 'CE3', 'CZ2', 'CZ3', 'CH2'],
+        'HIS': ['CG', 'ND1', 'CD2', 'CE1', 'NE2']
+    }
+
+    if res.resname not in AROMATIC_RINGS:
+        return None
+
+    ring_atoms = res.atoms.select_atoms("name " + " ".join(AROMATIC_RINGS[res.resname]))
+    if len(ring_atoms) < 5:
+        return None
+
+    # 1. Pure Geometric Centroid (Not center of mass)
+    center = ring_atoms.positions.mean(axis=0)
+
+    # 2. Plane Normal Vector using SVD or cross product of ring plane
+    pos = ring_atoms.positions
+    v1 = pos[1] - pos[0]
+    v2 = pos[2] - pos[0]
+    normal = np.cross(v1, v2)
+    normal = normal / np.linalg.norm(normal)
+
+    return {
+        'resid': res.resid,
+        'resname': res.resname,
+        'center': center,
+        'normal': normal
+    }
 
 
-# def count_hbond_like(target_atoms, binder_atoms, cutoff=3.5):
-#     """Count N/O atom pairs within cutoff. Return (count, unique_pairs_list).
-#        pairs reported as (target_resid, binder_resid)
-#     """
-#     targ_NO = target_atoms.select_atoms("name N O")
-#     bind_NO = binder_atoms.select_atoms("name N O")
-#     if len(targ_NO) == 0 or len(bind_NO) == 0:
-#         return 0, []
-#     d = distances.distance_array(targ_NO.positions, bind_NO.positions)
-#     i, j = np.where(d <= cutoff)
-#     pairs = set()
-#     for a, b in zip(i, j):
-#         pairs.add((int(targ_NO[a].resid), int(bind_NO[b].resid)))
-#     return len(pairs), sorted(pairs)
+def get_cation_centroids(atom_group):
+    """Extracts true positive charge centroids for LYS (NZ) and ARG (NE+NH1+NH2)."""
+    cations = []
+    for res in atom_group.residues:
+        if res.resname == 'LYS':
+            nz = res.atoms.select_atoms("name NZ")
+            if len(nz) > 0:
+                cations.append({
+                    'resid': res.resid,
+                    'resname': 'LYS',
+                    'center': nz.positions[0]
+                })
+        elif res.resname == 'ARG':
+            guanidinium = res.atoms.select_atoms("name NE NH1 NH2")
+            if len(guanidinium) == 3:
+                # Centroid of the entire guanidinium group
+                center = guanidinium.positions.mean(axis=0)
+                cations.append({
+                    'resid': res.resid,
+                    'resname': 'ARG',
+                    'center': center
+                })
+    return cations
 
 
-# def count_clashes(universe, cutoff=2.2):
-#     """Count inter-chain heavy-atom clashes (pairs < cutoff) across all chains.
-#        Returns number of pairs found.
-#     """
-#     # simple approach: consider all atoms, but exclude same-residue short distances by chain separation
-#     coords = universe.atoms.positions
-#     if len(coords) == 0:
-#         return 0
-#     # We'll do naive O(N^2) by chunking? For small models it is fine.
-#     from scipy.spatial import cKDTree
-#     kdt = cKDTree(coords)
-#     pairs = kdt.query_pairs(r=cutoff)
-#     # Filter out pairs that are within same residue (same resid & chain) - keep only inter-entity
-#     clashes = 0
-#     for a, b in pairs:
-#         aatom = universe.atoms[a]
-#         batom = universe.atoms[b]
-#         # skip hydrogens
-#         if aatom.element == 'H' or batom.element == 'H' or aatom.name.startswith('H') or batom.name.startswith('H'):
-#             continue
-#         # skip same residue
-#         if (aatom.segid, aatom.resnum, aatom.resname) == (batom.segid, batom.resnum, batom.resname):
-#             continue
-#         # NEW: skip immediate neighbors in the same chain
-#         if aatom.segid == batom.segid:
-#             if abs(aatom.resid - batom.resid) <= 1:
-#                 continue
-#         clashes += 1
-#     return clashes
+def analyze_pi_interactions_strict(target_atoms, binder_atoms, pi_dist_cutoff=5.5, cation_dist_cutoff=6.0,
+                                   max_offset=2.0):
+    AROMATIC_RINGS = {
+        'PHE': ['CG', 'CD1', 'CD2', 'CE1', 'CE2', 'CZ'],
+        'TYR': ['CG', 'CD1', 'CD2', 'CE1', 'CE2', 'CZ'],
+        'TRP': ['CG', 'CD1', 'CD2', 'NE1', 'CE2', 'CE3', 'CZ2', 'CZ3', 'CH2'],
+        'HIS': ['CG', 'ND1', 'CD2', 'CE1', 'NE2']
+    }
+
+    pi_pi_contacts = []
+    cation_pi_contacts = []
+
+    target_rings = [get_ring_geometry(r) for r in target_atoms.residues if get_ring_geometry(r)]
+    binder_rings = [get_ring_geometry(r) for r in binder_atoms.residues if get_ring_geometry(r)]
+
+    # 1. RIGOROUS PI-PI INTERACTIONS
+    for rA in target_rings:
+        for rB in binder_rings:
+            dist = np.linalg.norm(rA['center'] - rB['center'])
+            if dist <= pi_dist_cutoff:
+                # Plane normal angle
+                dot_prod = np.clip(abs(np.dot(rA['normal'], rB['normal'])), 0.0, 1.0)
+                angle_deg = np.degrees(np.arccos(dot_prod))
+
+                # Calculate lateral offset (projection onto ring plane)
+                vec_AB = rB['center'] - rA['center']
+                proj_dist = abs(np.dot(vec_AB, rA['normal']))  # Height above plane
+                offset = np.sqrt(max(0, dist ** 2 - proj_dist ** 2))  # Lateral shift
+
+                if offset <= max_offset:
+                    geometry = None
+                    if angle_deg <= 30.0:
+                        geometry = "Parallel"
+                    elif 60.0 <= angle_deg <= 90.0:
+                        geometry = "T-shaped (Edge-to-Face)"
+
+                    # Drop intermediate/unclassified angles to prevent false positives
+                    if geometry:
+                        pi_pi_contacts.append({
+                            'target': f"{rA['resid']} {rA['resname']}",
+                            'binder': f"{rB['resid']} {rB['resname']}",
+                            'distance_A': round(dist, 2),
+                            'offset_A': round(offset, 2),
+                            'angle_deg': round(angle_deg, 1),
+                            'geometry': geometry
+                        })
+
+    # 2. RIGOROUS CATION-PI INTERACTIONS
+    target_cations = get_cation_centroids(target_atoms)
+    binder_cations = get_cation_centroids(binder_atoms)
+
+    def check_cation_pi(cations, rings):
+        results = []
+        for cat in cations:
+            for ring in rings:
+                dist = np.linalg.norm(cat['center'] - ring['center'])
+                if dist <= cation_dist_cutoff:
+                    cat_vec = cat['center'] - ring['center']
+                    proj_dist = abs(np.dot(cat_vec, ring['normal']))  # Vertical height
+                    offset = np.sqrt(max(0, dist ** 2 - proj_dist ** 2))  # Lateral offset
+
+                    cat_vec_norm = cat_vec / np.linalg.norm(cat_vec)
+                    dot_prod = np.clip(abs(np.dot(ring['normal'], cat_vec_norm)), 0.0, 1.0)
+                    theta_deg = np.degrees(np.arccos(dot_prod))
+
+                    # Must sit above ring face (theta <= 45°) AND have lateral offset <= 2.0 Å
+                    if theta_deg <= 45.0 and offset <= max_offset:
+                        results.append({
+                            'cation': f"{cat['resid']} {cat['resname']}",
+                            'aromatic': f"{ring['resid']} {ring['resname']}",
+                            'distance_A': round(dist, 2),
+                            'offset_A': round(offset, 2),
+                            'theta_deg': round(theta_deg, 1)
+                        })
+        return results
+
+    cation_pi_contacts.extend(check_cation_pi(target_cations, binder_rings))
+    cation_pi_contacts.extend(check_cation_pi(binder_cations, target_rings))
+
+    return pi_pi_contacts, cation_pi_contacts
+
+################################################################################################################
+
 
 def interface_contacts_res_numbers(pairs):
     interface_contacts = []
@@ -278,8 +347,25 @@ def extract_sequence(atomgroup):
         seq.append(aa)
     return ''.join(seq), len(seq)
 
+def binder_analysis(binder):
+    hydrophobic_res_tot = ['ALA','VAL','ILE','LEU','MET','PHE','TYR','TRP']
+    positive_res_tot = ['ARG','LYS']
+    negative_res_tot = ['ASP','GLU']
+    aromatic_res_tot = ['PHE','TYR','TRP','HIS']
+    hydrophobic_res = [(res.resid,res.resname) for res in binder.residues if res.resname in hydrophobic_res_tot ]
+    positive_res = [(res.resid,res.resname) for res in binder.residues if res.resname in positive_res_tot ]
+    negative_res = [(res.resid,res.resname) for res in binder.residues if res.resname in negative_res_tot]
+    aromatic_res = [(res.resid,res.resname) for res in binder.residues if res.resname in aromatic_res_tot]
 
+
+    return hydrophobic_res, positive_res, negative_res, aromatic_res
+
+
+################################################################################################################
+################################################################################################################
 # ----------------------------- Main design analysis -----------------------------
+################################################################################################################
+################################################################################################################
 
 def analyze_design(pdb_path, target_chain='A', binder_chain='B', add_target_res_offset=0, freesasa_available=False,
                    tmpdir=None, dist_threshod=4.0):
@@ -322,6 +408,216 @@ def analyze_design(pdb_path, target_chain='A', binder_chain='B', add_target_res_
     interface_contacts_4A = interface_contacts_res_numbers(pairs4)
     interface_contacts_hypho = interface_contacts_res_numbers(hypho_list)
     interface_contacts_salt_bridge = interface_contacts_res_numbers(salt_bridge)
+
+
+
+    pi_pi_contacts, cation_pi_contacts = analyze_pi_interactions_strict(target, binder, pi_dist_cutoff=5.5, cation_dist_cutoff=6.0,
+                                   max_offset=2.0)
+
+
+####### binder Analysis #################################################
+    hydrophobic_res, positive_res, negative_res, aromatic_res = binder_analysis(binder)
+
+    hydrophobic_res_fraction = 100 * len(hydrophobic_res) / len(binder.residues)
+    positive_res_fraction = 100 * len(positive_res) / len(binder.residues)
+    negative_res_fraction = 100 * len(negative_res) / len(binder.residues)
+    aromatic_res_fraction = 100 * len(aromatic_res) / len(binder.residues)
+    net_charged_estimated = len(positive_res) - len(negative_res)
+
+
+
+
+    #
+    hydrophobic_res_interface = []
+    for i in range(len(pairs4)):
+        if pairs4[i][1] in hydrophobic_res:
+            hydrophobic_res_interface.append(pairs4[i][1])
+
+    positive_res_interface = []
+    for i in range(len(pairs4)):
+        if pairs4[i][1] in positive_res:
+            positive_res_interface.append(pairs4[i][1])
+
+    negative_res_interface = []
+    for i in range(len(pairs4)):
+        if pairs4[i][1] in negative_res:
+            negative_res_interface.append(pairs4[i][1])
+
+    aromatic_res_interface = []
+    for i in range(len(pairs4)):
+        if pairs4[i][1] in aromatic_res:
+            aromatic_res_interface.append(pairs4[i][1])
+
+    hydrophobic_res_fraction_interface = 100 * len(hydrophobic_res_interface) / len(pairs4)
+    positive_res_fraction_interface = 100 * len(positive_res_interface) / len(pairs4)
+    negative_res_fraction_interface = 100 * len(negative_res_interface) / len(pairs4)
+    aromatic_res_fraction_interface = 100 * len(aromatic_res_interface) / len(pairs4)
+
+########################################################################################################
+#######################    H bond    #############################################
+
+
+
+
+    def evaluate_pairs_bindcraft(
+            donors, acceptors, distance_cutoff=3.5, angle_cutoff=90.0, add_target_res_offset = add_target_res_offset, flag = 't'):
+
+        # Map acceptor atom names to their chemically bonded parent atom names
+        ACCEPTOR_PARENTS = {
+            # Backbone
+            'O': 'C',
+            # Side chains
+            'OD1': 'CG',
+            'OD2': 'CG',  # ASP
+            'OE1': 'CD',
+            'OE2': 'CD',  # GLU, GLN
+            'OG': 'CB',  # SER
+            'OG1': 'CB',  # THR
+            'OH': 'CZ',  # TYR
+            'ND1': 'CG',
+            'NE2': 'CD2',  # HIS
+        }
+        results = []
+        t = 0
+        b = 0
+        if flag == 't':
+            t = add_target_res_offset
+        elif flag == 'b':
+            b = add_target_res_offset
+
+        for d in donors:
+            for a in acceptors:
+                # 1. Heavy atom distance check
+                dist = np.linalg.norm(d.position - a.position)
+
+                if dist <= distance_cutoff:
+                    # 2. Get true parent atom (e.g., Carbon attached to Oxygen)
+                    parent_name = ACCEPTOR_PARENTS.get(a.name)
+
+                    if parent_name:
+                        parent_atoms = a.residue.atoms.select_atoms(f'name {parent_name}')
+
+                        if len(parent_atoms) > 0:
+                            parent_pos = parent_atoms.positions[0]
+
+                            # Vector 1: Acceptor -> Donor
+                            v1 = d.position - a.position
+                            # Vector 2: Acceptor -> Parent
+                            v2 = parent_pos - a.position
+
+                            cosine = np.dot(v1, v2) / (np.linalg.norm(v1) * np.linalg.norm(v2))
+                            angle_deg = np.degrees(np.arccos(np.clip(cosine, -1.0, 1.0)))
+
+
+
+                            if angle_deg >= angle_cutoff:
+                                results.append({
+                                    'donor': (d.resid + t, d.resname, d.name),
+                                    'acceptor': (a.resid + b, a.resname, a.name),
+                                    'distance_A': round(float(dist), 2),
+                                    'angle_deg': round(float(angle_deg), 1),
+                                })
+                            continue
+
+                    # 3. Fallback if parent atom name isn't in table
+                    results.append({
+                        'donor': (d.resid + t, d.resname, d.name),
+                        'acceptor': (a.resid + b, a.resname, a.name),
+                        'distance_A': round(float(dist), 2),
+                        'angle_deg': None,
+                    })
+
+        return results
+
+    # Donor heavy atoms (nitrogen and oxygen atoms with attached hydrogens)
+    DONOR_NAMES = {
+        'N',
+        'NE',
+        'NH1',
+        'NH2',
+        'ND1',
+        'NE2',
+        'OG',
+        'OG1',
+        'OH',
+        'SG',
+        'NZ',
+    }
+
+    # Acceptor heavy atoms (oxygen and nitrogen atoms with lone pairs)
+    ACCEPTOR_NAMES = {
+        'O',
+        'OD1',
+        'OD2',
+        'OE1',
+        'OE2',
+        'OG',
+        'OG1',
+        'OH',
+        'ND1',
+        'NE2',
+    }
+
+    # Convert sets to MDAnalysis selection strings
+    donor_sel_str = "name " + " ".join(DONOR_NAMES)
+    acceptor_sel_str = "name " + " ".join(ACCEPTOR_NAMES)
+
+    # Target Donors & Acceptors
+    target_donors = target.select_atoms(donor_sel_str)
+    target_acceptors = target.select_atoms(acceptor_sel_str)
+
+    # Binder Donors & Acceptors
+    binder_donors = binder.select_atoms(donor_sel_str)
+    binder_acceptors = binder.select_atoms(acceptor_sel_str)
+
+    # Direction 1: Target gives H, Binder receives H
+    hbonds_target_to_binder = evaluate_pairs_bindcraft(
+        donors=target_donors,
+        acceptors=binder_acceptors,
+        distance_cutoff=3.5,
+        angle_cutoff=90.0,add_target_res_offset = add_target_res_offset, flag = 't'
+    )
+
+    # Direction 2: Binder gives H, Target receives H
+    hbonds_binder_to_target = evaluate_pairs_bindcraft(
+        donors=binder_donors,
+        acceptors=target_acceptors,
+        distance_cutoff=3.5,
+        angle_cutoff=90.0, add_target_res_offset = add_target_res_offset, flag = 'b'
+    )
+
+########################################################################################################
+########################################################################################################
+
+    out['hbonds_target_to_binder'] = hbonds_target_to_binder
+    out['hbonds_binder_to_target'] = hbonds_binder_to_target
+    out['Number of All H bonds'] = len(hbonds_target_to_binder) + len(hbonds_binder_to_target)
+
+    out['hydrophobic_res'] = hydrophobic_res
+    out['hydrophobic_res_fraction'] = round(hydrophobic_res_fraction,2)
+    out['hydrophobic_res_interface'] = list(set(hydrophobic_res_interface))
+    out['hydrophobic_res_fraction_interface'] = round(hydrophobic_res_fraction_interface,2)
+
+    out['positive_res'] = positive_res
+    out['positive_res_fraction'] = round(positive_res_fraction,2)
+    out['positive_res_interface'] = list(set(positive_res_interface))
+    out['positive_res_fraction_interface'] = round(positive_res_fraction_interface,2)
+
+    out['negative_res'] = negative_res
+    out['negative_res_fraction'] = round(negative_res_fraction,2)
+    out['negative_res_interface'] = list(set(negative_res_interface))
+    out['negative_res_fraction_interface'] = round(negative_res_fraction_interface,2)
+
+    out['aromatic_res'] = aromatic_res
+    out['aromatic_res_fraction'] = round(aromatic_res_fraction,2)
+    out['aromatic_res_interface'] = list(set(aromatic_res_interface))
+    out['aromatic_res_fraction_interface'] = round(aromatic_res_fraction_interface,2)
+
+    out['net_charged_estimated'] = net_charged_estimated
+    out['pi_pi_contacts'] = pi_pi_contacts
+    out['cation_pi_contacts'] = cation_pi_contacts
+    out['n_pi_pi_contacts'] = len(pi_pi_contacts)
+    out['n_cation_pi_contacts'] = len(cation_pi_contacts)
 
     n_hypho_list = len(hypho_list)
     n_salt_bridge = len(salt_bridge)
