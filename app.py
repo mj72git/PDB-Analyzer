@@ -579,7 +579,7 @@ if st.session_state.analysis_done and st.session_state.df_out is not None:
                 st.write("------------------------------------------------------------------")
                 st.write("**cation_pi_contacts**")
                 st.text(format_pairs_cation_pi(row['cation_pi_contacts']))
-                st.text(row['cation_pi_contacts'])
+                #st.text(row['cation_pi_contacts'])
                 st.write("------------------------------------------------------------------")
                 st.write("------------------------------------------------------------------")
                 st.write("**Contacts (4Å)**")
