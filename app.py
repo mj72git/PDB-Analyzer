@@ -116,9 +116,9 @@ mj = st.sidebar.header("App created by MJ Shadfar")
 st.sidebar.markdown("#### currently a PhD candidate in A/Prof Jane Allison’s group, School of Biological Science, University of Auckland. ")
 st.sidebar.caption(" [Linkedin Profile](https://www.linkedin.com/in/mj-shadfar-3919b5b8/)")
 st.sidebar.write(" [Github Repository](https://github.com/mj72git/PDB-Analyzer)")
-st.sidebar.caption("PDB Analyser v1.2.1")
+st.sidebar.caption("PDB Analyser v1.3.1")
 st.sidebar.caption("")
-st.sidebar.caption("The last modify : 15 Sep 2026")
+st.sidebar.caption("The last modify : 22 Sep 2026")
 # st.table(
 #     {
 #         ":material/folder: Project": "**Streamlit** - The fastest way to build data apps",
