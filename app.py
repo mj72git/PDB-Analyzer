@@ -76,6 +76,17 @@ def format_pairs_cation_pi(pairs):
         return " ".join([f" Cation : {a['cation']}   ->   Aromatic : {a['aromatic']}  |  distance = {round(a['distance_A'],2)} Å  |  offset = {a['offset_A']} | angle = {a['theta_deg']} degree \n" for a in pairs])
     except Exception:
         return str(pairs)
+
+
+def format_pairs_binder(pairs):
+    if not pairs or pairs == 'nan':
+        return "None"
+    try:
+        return " ".join([f" {a} \n" for a in pairs])
+    except Exception:
+        return str(pairs)
+
+
 ################################################################################
 ################################################################################
 
@@ -598,6 +609,31 @@ if st.session_state.analysis_done and st.session_state.df_out is not None:
                 st.text(f"Basic: {row['binder_positive_res_fraction_interface']} %")
                 st.text(f"Acidic: {row['binder_negative_res_fraction_interface']} %")
                 st.text(f"Aromatic: {row['binder_aromatic_res_fraction_interface']} %")
+                st.write("------------------------------------------------------------------")
+                st.write('**Hydrophobicity Analysis:**')
+                st.text(format_pairs_binder(row['binder_hydrophobic_res']))
+                st.write("-------------------------------------------------------------------")
+                st.write('**Acidic Analysis:**')
+                st.text(format_pairs_binder(row['binder_negative_res']))
+                st.write("------------------------------------------------------------------")
+                st.write('**Basic Analysis:**')
+                st.text(format_pairs_binder(row['binder_positive_res']))
+                st.write("------------------------------------------------------------------")
+                st.write('**Aromatic Analysis:**')
+                st.text(format_pairs_binder(row['binder_aromatic_res']))
+                st.write("------------------------------------------------------------------")
+                st.write("------------------------------------------------------------------")
+                st.write('**Hydrophobicity Analysis (Interface):**')
+                st.text(format_pairs_binder(row['binder_hydrophobic_res_interface']))
+                st.write("------------------------------------------------------------------")
+                st.write('**Acidic Analysis (Interface):**')
+                st.text(format_pairs_binder(row['binder_negative_res_interface']))
+                st.write("------------------------------------------------------------------")
+                st.write('**Basic Analysis (Interface):**')
+                st.text(format_pairs_binder(row['binder_positive_res_interface']))
+                st.write("------------------------------------------------------------------")
+                st.write('**Aromatic Analysis (Interface):**')
+                st.text(format_pairs_binder(row['binder_aromatic_res_interface']))
 
 ############################################################################################################################
 ############################################################################################################################
@@ -650,6 +686,18 @@ if st.session_state.analysis_done and st.session_state.df_out is not None:
             st.info("No data to plot. Please run analysis first.")
 
         st.write("------------------------------------------------------------------------------------------")
+
+
+        if df is not None and df.shape[0] > 0:
+            fig_contacts_ar = px.bar(
+                df,
+                x='design_id',
+                y='binder_aromatic_res_fraction',
+                title='Binder Aromatic Residues for all designs (%)'
+            )
+            st.plotly_chart(fig_contacts_ar, use_container_width=True)
+        else:
+            st.info("No data to plot. Please run analysis first.")
 
 
 
