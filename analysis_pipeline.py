@@ -42,8 +42,10 @@ def parse_freesasa_total(txt_path):
         return None
     return None
 
-
-def residue_contacts(target_atoms, binder_atoms, cutoff=4.0, add_target_res_offset=0):
+##################################################################################################
+################################# Residue contacts #################################################
+##################################################################################################
+def residue_contacts(target_atoms, binder_atoms, cutoff=4.0, add_target_res_offset=0, shift = 0):
     """
     Returns:
     - contacts: sorted list of ((resA_id, resA_name), (resB_id, resB_name))
@@ -63,16 +65,28 @@ def residue_contacts(target_atoms, binder_atoms, cutoff=4.0, add_target_res_offs
     salt_bridge = []
 
     # 3. Analyze Contacts
+    flag = ' (A) '
     for a, b in zip(i, j):
         # Extract residue info
-        resA_id = int(target_atoms[a].resid + add_target_res_offset)
-        resA_name = target_atoms[a].resname
+        if target_atoms[a].resid < shift :
+            flag = ' (A) '
+            resA_id = int(target_atoms[a].resid + add_target_res_offset)
+            resA_name = target_atoms[a].resname
+        else:
+            flag = ' (B) '
+            resA_id = int(target_atoms[a].resid + add_target_res_offset - shift)
+            resA_name = target_atoms[a].resname
         
         resB_id = int(binder_atoms[b].resid)
         resB_name = binder_atoms[b].resname
         
-        resA_info = (resA_id, resA_name)
-        resB_info = (resB_id, resB_name)
+        if shift != 0:
+            resA_info = (flag, resA_id, resA_name)
+            resB_info = (resB_id, resB_name)
+        else:
+            flag = ' (A) '
+            resA_info = (flag, resA_id, resA_name)
+            resB_info = (resB_id, resB_name)
 
         
         # Add to unique set of pairs
@@ -87,15 +101,21 @@ def residue_contacts(target_atoms, binder_atoms, cutoff=4.0, add_target_res_offs
                # f"Target {ta.resname}{ta.resid}:{ta.name}  —  Binder {bb.resname}{bb.resid}:{bb.name}  =  {d[a, b]:.2f} Å")
             # print(f"Target {ta}:  —  Binder {bb}  =  {d[a,b]:.2f} Å")
 
-    sorted_contacts = sorted(list(pairs), key=lambda x: (x[0][0], x[1][0]))
+    #sorted_contacts = sorted(list(pairs), key=lambda x: (x[0][1], x[1][0]))
+    sorted_contacts = sorted(list(pairs), key=lambda x: (x[0][0], x[0][1], x[1][0]))
+    # sorted_contacts = sorted(
+    #     pairs,
+    #     key=lambda x: (
+    #         0 if x[0][0] == "A" else 1,
+    #         x[0][1]
+    #     )
+    # )
     return sorted_contacts
 
-#######
-#######
-
-
+##################################################################################################
+################################# Analyze interactions #################################################
 def analyze_interactions(target_atoms, binder_atoms, add_target_res_offset=0,
-                         salt_cutoff=4.0, hydrophobic_cutoff=4.0):
+                         salt_cutoff=4.0, hydrophobic_cutoff=4.0, shift = 0):
     if len(target_atoms) == 0 or len(binder_atoms) == 0:
         return [], [], []
 
@@ -114,10 +134,10 @@ def analyze_interactions(target_atoms, binder_atoms, add_target_res_offset=0,
     hydrophobic_patches = set()
     salt_bridges = set()
 
-    # -------------------------------------------------------------
-    # 1. SALT BRIDGES (Checked specifically between charged sidechain atoms)
-    # -------------------------------------------------------------
-    # Filter selection to charged sidechains only
+##### -------------------------------------------------------------#################################################
+##### 1. SALT BRIDGES (Checked specifically between charged sidechain atoms)#################################################
+##### -------------------------------------------------------------#################################################
+###### Filter selection to charged sidechains only
     target_charged = target_atoms.select_atoms(
         "resname ASP GLU LYS ARG HIS and name OD1 OD2 OE1 OE2 NZ NH1 NH2 NE ND1 NE2")
     binder_charged = binder_atoms.select_atoms(
@@ -127,6 +147,7 @@ def analyze_interactions(target_atoms, binder_atoms, add_target_res_offset=0,
         d_salt = distances.distance_array(target_charged.positions, binder_charged.positions)
         i_s, j_s = np.where(d_salt <= salt_cutoff)
 
+        flag = ' (A) '
         for a, b in zip(i_s, j_s):
             atomA = target_charged[a]
             atomB = binder_charged[b]
@@ -138,14 +159,24 @@ def analyze_interactions(target_atoms, binder_atoms, add_target_res_offset=0,
             is_A_neg_B_pos = (resA_name in NEGATIVE_AAS) and (resB_name in POSITIVE_AAS)
 
             if is_A_pos_B_neg or is_A_neg_B_pos:
-                resA_info = ((atomA.resid + add_target_res_offset), resA_name, atomA.name)
-                resB_info = ((atomB.resid), resB_name, atomB.name)
-                salt_bridges.add((resA_info, resB_info))
+                if atomA.resid < shift :
+                    flag = ' (A) '
+                    resA_info = (flag, (atomA.resid + add_target_res_offset), resA_name, atomA.name)
+                    resB_info = ((atomB.resid), resB_name, atomB.name)
+                    salt_bridges.add((resA_info, resB_info))
+                else:
+                    if shift ==0 :
+                        flag = '  '
+                    else:
+                        flag = ' (B) '
+                    resA_info = (flag, (atomA.resid + add_target_res_offset - shift), resA_name, atomA.name)
+                    resB_info = ((atomB.resid), resB_name, atomB.name)
+                    salt_bridges.add((resA_info, resB_info))
 
-    # -------------------------------------------------------------
-    # 2. HYDROPHOBIC CONTACTS (Checked specifically between sidechain non-polar carbons)
-    # -------------------------------------------------------------
-    # Exclude backbone atoms (N, C, O, CA) to only measure true hydrophobic sidechain contacts
+####### -------------------------------------------------------------#################################################
+####### 2. HYDROPHOBIC CONTACTS (Checked specifically between sidechain non-polar carbons)#################################################
+####### -------------------------------------------------------------
+######Exclude backbone atoms (N, C, O, CA) to only measure true hydrophobic sidechain contacts #################################################
     
     HYDROPHOBIC_AAS = "VAL ILE LEU PHE MET TRP ALA PRO"
     HYDROPHOBIC_ATOMS = "CB CG* CD* CE* CZ* CH* SD"
@@ -161,23 +192,33 @@ def analyze_interactions(target_atoms, binder_atoms, add_target_res_offset=0,
         d_hydro = distances.distance_array(target_hydro.positions, binder_hydro.positions)
         i_h, j_h = np.where(d_hydro <= hydrophobic_cutoff)
 
+        flag = ' (A) '
         for a, b in zip(i_h, j_h):
             atomA = target_hydro[a]
             atomB = binder_hydro[b]
 
-            resA_info = ((atomA.resid + add_target_res_offset), atomA.resname, atomA.name)
-            resB_info = ((atomB.resid), atomB.resname, atomB.name)
-            hydrophobic_patches.add((resA_info, resB_info))
+            if atomA.resid < shift:
+                flag = ' (A) '
+                resA_info = (flag, (atomA.resid + add_target_res_offset), atomA.resname, atomA.name)
+                resB_info = ((atomB.resid), atomB.resname, atomB.name)
+                hydrophobic_patches.add((resA_info, resB_info))
+            else:
+                if shift == 0:
+                    flag = '  '
+                else:
+                    flag = ' (B) '
+                resA_info = (flag, (atomA.resid + add_target_res_offset - shift), atomA.resname, atomA.name)
+                resB_info = ((atomB.resid), atomB.resname, atomB.name)
+                hydrophobic_patches.add((resA_info, resB_info))
 
     # Sort output
-    sorted_patches = sorted(list(hydrophobic_patches), key=lambda x: (x[0][0], x[1][0]))
-    sorted_salt_bridges = sorted(list(salt_bridges), key=lambda x: (x[0][0], x[1][0]))
+    sorted_patches = sorted(list(hydrophobic_patches), key=lambda x: (x[0][0], x[0][1], x[1][0]))
+    sorted_salt_bridges = sorted(list(salt_bridges), key=lambda x: (x[0][0], x[0][1], x[1][0]))
 
     return sorted_patches, sorted_salt_bridges
 
-################################################################################################################
-
-######################       pi-pi & cation-pi
+##################################################################################################
+################################# pi_pi & cation_pi intercations #################################################
 
 def get_ring_geometry(res):
     """Calculates geometric centroid, normal vector, and residue info for aromatic rings."""
@@ -239,7 +280,7 @@ def get_cation_centroids(atom_group):
 
 
 def analyze_pi_interactions_strict(target_atoms, binder_atoms, pi_dist_cutoff=5.5, cation_dist_cutoff=6.0,
-                                   max_offset=2.0):
+                                   max_offset=1.39, shift = 0, add_target_res_offset = 0):
     AROMATIC_RINGS = {
         'PHE': ['CG', 'CD1', 'CD2', 'CE1', 'CE2', 'CZ'],
         'TYR': ['CG', 'CD1', 'CD2', 'CE1', 'CE2', 'CZ'],
@@ -276,20 +317,40 @@ def analyze_pi_interactions_strict(target_atoms, binder_atoms, pi_dist_cutoff=5.
 
                     # Drop intermediate/unclassified angles to prevent false positives
                     if geometry:
-                        pi_pi_contacts.append({
-                            'target': f"{rA['resid']} {rA['resname']}",
-                            'binder': f"{rB['resid']} {rB['resname']}",
-                            'distance_A': round(dist, 2),
-                            'offset_A': round(offset, 2),
-                            'angle_deg': round(angle_deg, 1),
-                            'geometry': geometry
-                        })
+                        if shift == 0:
+                            pi_pi_contacts.append({
+                                'target': f"{rA['resid'] + add_target_res_offset} {rA['resname']}",
+                                'binder': f"{rB['resid']} {rB['resname']}",
+                                'distance_A': round(dist, 2),
+                                'offset_A': round(offset, 2),
+                                'angle_deg': round(angle_deg, 1),
+                                'geometry': geometry
+                            })
+                        else:
+                            if rA['resid'] < shift:
+                                pi_pi_contacts.append({
+                                    'target': f" (A) {rA['resid'] + add_target_res_offset} {rA['resname']}",
+                                    'binder': f"{rB['resid']} {rB['resname']}",
+                                    'distance_A': round(dist, 2),
+                                    'offset_A': round(offset, 2),
+                                    'angle_deg': round(angle_deg, 1),
+                                    'geometry': geometry
+                                })
+                            else:
+                                pi_pi_contacts.append({
+                                    'target': f" (B) {rA['resid'] - shift + add_target_res_offset} {rA['resname']}",
+                                    'binder': f"{rB['resid']} {rB['resname']}",
+                                    'distance_A': round(dist, 2),
+                                    'offset_A': round(offset, 2),
+                                    'angle_deg': round(angle_deg, 1),
+                                    'geometry': geometry
+                                })
 
     # 2. RIGOROUS CATION-PI INTERACTIONS
     target_cations = get_cation_centroids(target_atoms)
     binder_cations = get_cation_centroids(binder_atoms)
 
-    def check_cation_pi(cations, rings):
+    def check_cation_pi_target_cation(cations, rings):
         results = []
         for cat in cations:
             for ring in rings:
@@ -303,32 +364,110 @@ def analyze_pi_interactions_strict(target_atoms, binder_atoms, pi_dist_cutoff=5.
                     dot_prod = np.clip(abs(np.dot(ring['normal'], cat_vec_norm)), 0.0, 1.0)
                     theta_deg = np.degrees(np.arccos(dot_prod))
 
+                    ######### adding shift & add_target_res_offset ########################################
+                    ################################################################################
+
                     # Must sit above ring face (theta <= 45°) AND have lateral offset <= 2.0 Å
                     if theta_deg <= 45.0 and offset <= max_offset:
-                        results.append({
-                            'cation': f"{cat['resid']} {cat['resname']}",
-                            'aromatic': f"{ring['resid']} {ring['resname']}",
-                            'distance_A': round(dist, 2),
-                            'offset_A': round(offset, 2),
-                            'theta_deg': round(theta_deg, 1)
-                        })
+                        if shift == 0:
+                            results.append({
+                                'cation': f"{cat['resid'] + add_target_res_offset} {cat['resname']}",
+                                'aromatic': f"{ring['resid']} {ring['resname']}",
+                                'distance_A': round(dist, 2),
+                                'offset_A': round(offset, 2),
+                                'theta_deg': round(theta_deg, 1)
+                            })
+
+                        elif cat['resid'] < shift:
+                            results.append({
+                                'cation': f" (A) {cat['resid'] + add_target_res_offset} {cat['resname']}",
+                                'aromatic': f"{ring['resid']} {ring['resname']}",
+                                'distance_A': round(dist, 2),
+                                'offset_A': round(offset, 2),
+                                'theta_deg': round(theta_deg, 1)
+                            })
+
+                        else:
+                            results.append({
+                                'cation': f" (B) {cat['resid'] - shift + add_target_res_offset} {cat['resname']}",
+                                'aromatic': f"{ring['resid']} {ring['resname']}",
+                                'distance_A': round(dist, 2),
+                                'offset_A': round(offset, 2),
+                                'theta_deg': round(theta_deg, 1)
+                            })
+
         return results
 
-    cation_pi_contacts.extend(check_cation_pi(target_cations, binder_rings))
-    cation_pi_contacts.extend(check_cation_pi(binder_cations, target_rings))
+    ##########################
+    def check_cation_pi_binder_cation(cations, rings):
+        results = []
+        for cat in cations:
+            for ring in rings:
+                dist = np.linalg.norm(cat['center'] - ring['center'])
+                if dist <= cation_dist_cutoff:
+                    cat_vec = cat['center'] - ring['center']
+                    proj_dist = abs(np.dot(cat_vec, ring['normal']))  # Vertical height
+                    offset = np.sqrt(max(0, dist ** 2 - proj_dist ** 2))  # Lateral offset
+
+                    cat_vec_norm = cat_vec / np.linalg.norm(cat_vec)
+                    dot_prod = np.clip(abs(np.dot(ring['normal'], cat_vec_norm)), 0.0, 1.0)
+                    theta_deg = np.degrees(np.arccos(dot_prod))
+
+                    ######### adding shift & add_target_res_offset ########################################
+                    ################################################################################
+
+                    # Must sit above ring face (theta <= 45°) AND have lateral offset <= 2.0 Å
+                    if theta_deg <= 45.0 and offset <= max_offset:
+                        if shift == 0:
+                            results.append({
+                                'cation': f"{cat['resid']} {cat['resname']}",
+                                'aromatic': f"{ring['resid'] + add_target_res_offset} {ring['resname']}",
+                                'distance_A': round(dist, 2),
+                                'offset_A': round(offset, 2),
+                                'theta_deg': round(theta_deg, 1)
+                            })
+
+                        elif ring['resid'] < shift:
+                            results.append({
+                                'cation': f"{cat['resid']} {cat['resname']}",
+                                'aromatic': f" (A) {ring['resid'] + add_target_res_offset} {ring['resname']}",
+                                'distance_A': round(dist, 2),
+                                'offset_A': round(offset, 2),
+                                'theta_deg': round(theta_deg, 1)
+                            })
+                        else:
+                            results.append({
+                                'cation': f"{cat['resid']} {cat['resname']}",
+                                'aromatic': f" (B) {ring['resid'] - shift + add_target_res_offset} {ring['resname']}",
+                                'distance_A': round(dist, 2),
+                                'offset_A': round(offset, 2),
+                                'theta_deg': round(theta_deg, 1)
+                            })
+
+        return results
+
+
+    cation_pi_contacts.extend(check_cation_pi_target_cation(target_cations, binder_rings))
+    cation_pi_contacts.extend(check_cation_pi_binder_cation(binder_cations, target_rings))
 
     return pi_pi_contacts, cation_pi_contacts
 
-################################################################################################################
-
+##################################################################################################
+################################# interface_contacts_res_numbers  #################################################
 
 def interface_contacts_res_numbers(pairs):
-    interface_contacts = []
-    for d in pairs:
-        interface_contacts.append(d[0][0])
-    interface_contacts = sorted(list(set(interface_contacts)))
-    return interface_contacts
+    if len(pairs) == 0:
+        return []
+    else:
+        interface_contacts = []
+        for d in pairs:
+            #interface_contacts.append(d[0][0])
+            interface_contacts.append(d[0][1])
+        interface_contacts = sorted(list(set(interface_contacts)))
+        return interface_contacts
 
+##################################################################################################
+################################# Extract seq three to one  #################################################
 
 def extract_sequence(atomgroup):
     """Return one-letter sequence for an MDAnalysis atomgroup's residues (unique residues in order)."""
@@ -347,6 +486,9 @@ def extract_sequence(atomgroup):
         seq.append(aa)
     return ''.join(seq), len(seq)
 
+##################################################################################################
+################################# Binder Analysis  #################################################
+
 def binder_analysis(binder):
     hydrophobic_res_tot = ['ALA','VAL','ILE','LEU','MET','PHE','TYR','TRP']
     positive_res_tot = ['ARG','LYS']
@@ -359,15 +501,16 @@ def binder_analysis(binder):
 
 
     return hydrophobic_res, positive_res, negative_res, aromatic_res
-
-
+################################################################################################################
+################################################################################################################
 ################################################################################################################
 ################################################################################################################
 # ----------------------------- Main design analysis -----------------------------
 ################################################################################################################
 ################################################################################################################
-
-def analyze_design(pdb_path, target_chain='A', binder_chain='B', add_target_res_offset=0, freesasa_available=False,
+################################################################################################################
+################################################################################################################
+def analyze_design(pdb_path, target_chain='A', binder_chain='B', add_target_res_offset=0, freesasa_available=False, shift = 0,
                    tmpdir=None, dist_threshod=4.0):
     """Analyze a single design PDB file. Returns dict of computed metrics."""
     out = {}
@@ -388,6 +531,16 @@ def analyze_design(pdb_path, target_chain='A', binder_chain='B', add_target_res_
             return sel2
         return sel1
 
+
+    def pairs_multi(pairs):
+        pairs_multi = []
+        for i in range(len(pairs)):
+            pairs_multi.append((pairs[i][0][0], pairs[i][0][1]))
+        pairs_multi = sorted(list(set(pairs_multi)), key=lambda x: (x[0], x[1]))
+        return pairs_multi
+
+
+
     target = select_non_h(target_chain)
     binder = select_non_h(binder_chain)
 
@@ -396,26 +549,41 @@ def analyze_design(pdb_path, target_chain='A', binder_chain='B', add_target_res_
 
     # 1. Contacts Calculation (MUST BE DONE FIRST)
     # 3.0A Contacts and Hydrophobic Patches
-    pairs3 = residue_contacts(target, binder, cutoff=3.0, add_target_res_offset=add_target_res_offset)
+    pairs3 = residue_contacts(target, binder, cutoff=3.0, add_target_res_offset=add_target_res_offset, shift = shift)
+    if shift !=0:
+        pairs3_multi = pairs_multi(pairs3)
+    else:
+        pairs3_multi = []
 
     # 4.0A Contacts
-    pairs4 = residue_contacts(target, binder, cutoff=4.0, add_target_res_offset=add_target_res_offset)
+    pairs4 = residue_contacts(target, binder, cutoff=4.0, add_target_res_offset=add_target_res_offset, shift = shift)
+    if shift !=0:
+        pairs4_multi = pairs_multi(pairs4)
+    else:
+        pairs4_multi = []
+
 
     hypho_list, salt_bridge =  analyze_interactions(target, binder, add_target_res_offset=add_target_res_offset,
-                             salt_cutoff=dist_threshod, hydrophobic_cutoff=dist_threshod)
+                             salt_cutoff=dist_threshod, hydrophobic_cutoff=dist_threshod, shift = shift)
+
+    if shift != 0:
+        hypho_list_multi = pairs_multi(hypho_list)
+        salt_bridge_multi = pairs_multi(salt_bridge)
+    else:
+        hypho_list_multi = []
+        salt_bridge_multi = []
 
     interface_contacts_3A = interface_contacts_res_numbers(pairs3)
     interface_contacts_4A = interface_contacts_res_numbers(pairs4)
     interface_contacts_hypho = interface_contacts_res_numbers(hypho_list)
     interface_contacts_salt_bridge = interface_contacts_res_numbers(salt_bridge)
+                                                                                                        #pi_dist_cutoff=5.5
 
 
+    pi_pi_contacts, cation_pi_contacts = analyze_pi_interactions_strict(target, binder, pi_dist_cutoff=5.0, cation_dist_cutoff=6.0,
+                                   max_offset=1.39, shift = shift, add_target_res_offset = add_target_res_offset)
 
-    pi_pi_contacts, cation_pi_contacts = analyze_pi_interactions_strict(target, binder, pi_dist_cutoff=5.5, cation_dist_cutoff=6.0,
-                                   max_offset=2.0)
-
-
-####### binder Analysis #################################################
+################################# Continue Binder Analysis  #################################################
     hydrophobic_res, positive_res, negative_res, aromatic_res = binder_analysis(binder)
 
     hydrophobic_res_fraction = 100 * len(hydrophobic_res) / len(binder.residues)
@@ -448,19 +616,17 @@ def analyze_design(pdb_path, target_chain='A', binder_chain='B', add_target_res_
         if pairs4[i][1] in aromatic_res:
             aromatic_res_interface.append(pairs4[i][1])
 
-    hydrophobic_res_fraction_interface = 100 * len(hydrophobic_res_interface) / len(pairs4)
-    positive_res_fraction_interface = 100 * len(positive_res_interface) / len(pairs4)
-    negative_res_fraction_interface = 100 * len(negative_res_interface) / len(pairs4)
-    aromatic_res_fraction_interface = 100 * len(aromatic_res_interface) / len(pairs4)
+    hydrophobic_res_fraction_interface = 0 if len(pairs4) == 0  else 100 * len(hydrophobic_res_interface) / len(pairs4)
+    positive_res_fraction_interface = 0 if len(pairs4) == 0  else 100 * len(positive_res_interface) / len(pairs4)
+    negative_res_fraction_interface = 0 if len(pairs4) == 0  else 100 * len(negative_res_interface) / len(pairs4)
+    aromatic_res_fraction_interface = 0 if len(pairs4) == 0  else 100 * len(aromatic_res_interface) / len(pairs4)
 
-########################################################################################################
-#######################    H bond    #############################################
-
-
-
+##################################################################################################
+################################# H Bond  #################################################
 
     def evaluate_pairs_bindcraft(
-            donors, acceptors, distance_cutoff=3.5, angle_cutoff=90.0, add_target_res_offset = add_target_res_offset, flag = 't'):
+            donors, acceptors, distance_cutoff=3.5, angle_cutoff=90.0, add_target_res_offset = add_target_res_offset,
+            flag = 't', shift = 0):
 
         # Map acceptor atom names to their chemically bonded parent atom names
         ACCEPTOR_PARENTS = {
@@ -480,10 +646,19 @@ def analyze_design(pdb_path, target_chain='A', binder_chain='B', add_target_res_
         results = []
         t = 0
         b = 0
+        shift_a = 0
+        shift_d = 0
+        flag_target_chain = None
+        if shift ==0:
+            flag_target_chain = ' '
         if flag == 't':
             t = add_target_res_offset
+            shift_d = shift
+            shift_a = 0
         elif flag == 'b':
             b = add_target_res_offset
+            shift_a = shift
+            shift_d = 0
 
         for d in donors:
             for a in acceptors:
@@ -508,24 +683,120 @@ def analyze_design(pdb_path, target_chain='A', binder_chain='B', add_target_res_
                             cosine = np.dot(v1, v2) / (np.linalg.norm(v1) * np.linalg.norm(v2))
                             angle_deg = np.degrees(np.arccos(np.clip(cosine, -1.0, 1.0)))
 
-
-
                             if angle_deg >= angle_cutoff:
-                                results.append({
-                                    'donor': (d.resid + t, d.resname, d.name),
-                                    'acceptor': (a.resid + b, a.resname, a.name),
-                                    'distance_A': round(float(dist), 2),
-                                    'angle_deg': round(float(angle_deg), 1),
-                                })
-                            continue
+                                if flag == 't':
+
+
+
+                                    if d.resid < shift:
+                                        if shift == 0:
+                                            flag_target_chain = '  '
+                                        else:
+                                            flag_target_chain = ' (A) '
+
+                                        results.append({
+                                            'flag_target_chain' : flag_target_chain,
+                                            'donor': (d.resid + t, d.resname, d.name),
+                                            'acceptor': (a.resid + b, a.resname, a.name),
+                                            'distance_A': round(float(dist), 2),
+                                            'angle_deg': round(float(angle_deg), 1),
+                                        })
+                                    else:
+                                        if shift == 0:
+                                            flag_target_chain = '  '
+                                        else:
+                                            flag_target_chain = ' (B) '
+                                        results.append({
+                                            'flag_target_chain': flag_target_chain,
+                                            'donor': (d.resid + t - shift_d, d.resname, d.name),
+                                            'acceptor': (a.resid + b - shift_a , a.resname, a.name),
+                                            'distance_A': round(float(dist), 2),
+                                            'angle_deg': round(float(angle_deg), 1),
+                                        })
+
+
+
+
+
+                                elif flag =='b':
+                                    if a.resid < shift:
+                                        if shift == 0:
+                                            flag_target_chain = '  '
+                                        else:
+                                            flag_target_chain = ' (A) '
+                                        results.append({
+                                            'flag_target_chain' : flag_target_chain,
+                                            'donor': (d.resid + t, d.resname, d.name),
+                                            'acceptor': (a.resid + b, a.resname, a.name),
+                                            'distance_A': round(float(dist), 2),
+                                            'angle_deg': round(float(angle_deg), 1),
+                                        })
+                                    else:
+                                        if shift == 0:
+                                            flag_target_chain = '  '
+                                        else:
+                                            flag_target_chain = ' (B) '
+                                        results.append({
+                                            'flag_target_chain': flag_target_chain,
+                                            'donor': (d.resid + t - shift_d, d.resname, d.name),
+                                            'acceptor': (a.resid + b - shift_a , a.resname, a.name),
+                                            'distance_A': round(float(dist), 2),
+                                            'angle_deg': round(float(angle_deg), 1),
+                                        })
+                                continue
+
 
                     # 3. Fallback if parent atom name isn't in table
-                    results.append({
-                        'donor': (d.resid + t, d.resname, d.name),
-                        'acceptor': (a.resid + b, a.resname, a.name),
-                        'distance_A': round(float(dist), 2),
-                        'angle_deg': None,
-                    })
+                    if flag == 't':
+                        if d.resid < shift:
+                            if shift == 0:
+                                flag_target_chain = '  '
+                            else:
+                                flag_target_chain = ' (A) '
+                            results.append({
+                                'flag_target_chain': flag_target_chain,
+                                'donor': (d.resid + t, d.resname, d.name),
+                                'acceptor': (a.resid + b, a.resname, a.name),
+                                'distance_A': round(float(dist), 2),
+                                'angle_deg': None,
+                            })
+                        else:
+                            if shift == 0:
+                                flag_target_chain = '  '
+                            else:
+                                flag_target_chain = ' (B) '
+                            results.append({
+                                'flag_target_chain': flag_target_chain,
+                                'donor': (d.resid + t - shift_d, d.resname, d.name),
+                                'acceptor': (a.resid + b - shift_a, a.resname, a.name),
+                                'distance_A': round(float(dist), 2),
+                                'angle_deg': None,
+                            })
+                    elif flag == 'b':
+                        if a.resid < shift:
+                            if shift == 0:
+                                flag_target_chain = '  '
+                            else:
+                                flag_target_chain = ' (A) '
+                            results.append({
+                                'flag_target_chain': flag_target_chain,
+                                'donor': (d.resid + t, d.resname, d.name),
+                                'acceptor': (a.resid + b, a.resname, a.name),
+                                'distance_A': round(float(dist), 2),
+                                'angle_deg': None,
+                            })
+                        else:
+                            if shift == 0:
+                                flag_target_chain = '  '
+                            else:
+                                flag_target_chain = ' (B) '
+                            results.append({
+                                'flag_target_chain': flag_target_chain,
+                                'donor': (d.resid + t - shift_d, d.resname, d.name),
+                                'acceptor': (a.resid + b - shift_a, a.resname, a.name),
+                                'distance_A': round(float(dist), 2),
+                                'angle_deg': None,
+                            })
 
         return results
 
@@ -575,7 +846,7 @@ def analyze_design(pdb_path, target_chain='A', binder_chain='B', add_target_res_
         donors=target_donors,
         acceptors=binder_acceptors,
         distance_cutoff=3.5,
-        angle_cutoff=90.0,add_target_res_offset = add_target_res_offset, flag = 't'
+        angle_cutoff=90.0,add_target_res_offset = add_target_res_offset, flag = 't', shift = shift
     )
 
     # Direction 2: Binder gives H, Target receives H
@@ -583,7 +854,7 @@ def analyze_design(pdb_path, target_chain='A', binder_chain='B', add_target_res_
         donors=binder_donors,
         acceptors=target_acceptors,
         distance_cutoff=3.5,
-        angle_cutoff=90.0, add_target_res_offset = add_target_res_offset, flag = 'b'
+        angle_cutoff=90.0, add_target_res_offset = add_target_res_offset, flag = 'b', shift = shift
     )
 
 ########################################################################################################
@@ -593,6 +864,7 @@ def analyze_design(pdb_path, target_chain='A', binder_chain='B', add_target_res_
     out['hbonds_binder_to_target'] = hbonds_binder_to_target
     out['Number of All H bonds'] = len(hbonds_target_to_binder) + len(hbonds_binder_to_target)
 
+    #### binder only ###################################
     out['hydrophobic_res'] = hydrophobic_res
     out['hydrophobic_res_fraction'] = round(hydrophobic_res_fraction,2)
     out['hydrophobic_res_interface'] = list(set(hydrophobic_res_interface))
@@ -614,6 +886,7 @@ def analyze_design(pdb_path, target_chain='A', binder_chain='B', add_target_res_
     out['aromatic_res_fraction_interface'] = round(aromatic_res_fraction_interface,2)
 
     out['net_charged_estimated'] = net_charged_estimated
+    #########################################
     out['pi_pi_contacts'] = pi_pi_contacts
     out['cation_pi_contacts'] = cation_pi_contacts
     out['n_pi_pi_contacts'] = len(pi_pi_contacts)
@@ -624,13 +897,19 @@ def analyze_design(pdb_path, target_chain='A', binder_chain='B', add_target_res_
     out['n_contacts_3A'] = len(pairs3)
     out['n_contacts_4A'] = len(pairs4)
     out['pairs_3A'] = pairs3
+    out['pairs3_multi'] = pairs3_multi
     out['pairs_4A'] = pairs4
+    out['pairs4_multi'] = pairs4_multi
     out['3A_Residues'] = interface_contacts_3A
     out['4A_Residues'] = interface_contacts_4A
     out['n_contacts_3A_Residues'] = len(interface_contacts_3A)
     out['n_contacts_4A_Residues'] = len(interface_contacts_4A)
+
     out['hypho'] = hypho_list
+    out['hypho_multi'] = hypho_list_multi
     out['salt_bridge'] = salt_bridge
+    out['salt_bridge_multi'] = salt_bridge_multi
+
     out['hypho_Residues'] = interface_contacts_hypho
     out['salt_bridge_Residues'] = interface_contacts_salt_bridge
     out['number_hydrophobic_contacts_Residues'] = len(interface_contacts_hypho)
@@ -647,34 +926,34 @@ def analyze_design(pdb_path, target_chain='A', binder_chain='B', add_target_res_
 
     #### FINAL FIXED pLDDT SECTION (Matches BindCraft Scale & Interface) ####
     # 1. Select Alpha Carbons (CA) for Target and Binder
-    target_ca = u.select_atoms(f"(chainID {target_chain} or segid {target_chain}) and name CA")
-    binder_ca = u.select_atoms(f"(chainID {binder_chain} or segid {binder_chain}) and name CA")
+#    target_ca = u.select_atoms(f"(chainID {target_chain} or segid {target_chain}) and name CA")
+#    binder_ca = u.select_atoms(f"(chainID {binder_chain} or segid {binder_chain}) and name CA")
 
     # 2. Get the Binder Average (Divided by 100 to match BindCraft scale 0-1)
-    raw_binder = binder_ca.tempfactors.mean() if len(binder_ca) > 0 else 0
-    avg_binder = raw_binder / 100.0
+#    raw_binder = binder_ca.tempfactors.mean() if len(binder_ca) > 0 else 0
+#    avg_binder = raw_binder / 100.0
 
     # 3. Extract residue lists from pairs4 (4.0A) to capture all interface positions
-    target_interface_res = [p[0][0] for p in pairs4]
-    binder_interface_res = [p[1][0] for p in pairs4]
+#    target_interface_res = [p[0][0] for p in pairs4]
+#    binder_interface_res = [p[1][0] for p in pairs4]
 
     # Calculate Interface pLDDT if we have touching residues
-    if target_interface_res and binder_interface_res:
-        target_i_atoms = u.select_atoms(
-            f"(chainID {target_chain} or segid {target_chain}) and name CA and resid {' '.join(map(str, target_interface_res))}")
-        binder_i_atoms = u.select_atoms(
-            f"(chainID {binder_chain} or segid {binder_chain}) and name CA and resid {' '.join(map(str, binder_interface_res))}")
+#    if target_interface_res and binder_interface_res:
+#        target_i_atoms = u.select_atoms(
+#            f"(chainID {target_chain} or segid {target_chain}) and name CA and resid {' '.join(map(str, target_interface_res))}")
+#        binder_i_atoms = u.select_atoms(
+#            f"(chainID {binder_chain} or segid {binder_chain}) and name CA and resid {' '.join(map(str, binder_interface_res))}")
 
-        interface_atoms = target_i_atoms + binder_i_atoms
-        raw_interface = interface_atoms.tempfactors.mean() if len(interface_atoms) > 0 else 0
-        avg_interface = raw_interface / 100.0
-    else:
-        avg_interface = 0.0
+#        interface_atoms = target_i_atoms + binder_i_atoms
+#        raw_interface = interface_atoms.tempfactors.mean() if len(interface_atoms) > 0 else 0
+#        avg_interface = raw_interface / 100.0
+#    else:
+#        avg_interface = 0.0
 
     # 4. Save to output dictionary with BindCraft style scale
     #out['Average-binder-pLDDT'] = round(float(avg_binder), 2)
-    out['Average-pLDDT'] = round(float(avg_binder), 2)
-    out['Average-i-pLDDT'] = round(float(avg_interface), 2)
+#    out['Average-pLDDT'] = round(float(avg_binder), 2)
+#    out['Average-i-pLDDT'] = round(float(avg_interface), 2)
     #########################################################################
     #########################################################################
 

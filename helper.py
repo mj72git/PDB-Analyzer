@@ -64,6 +64,103 @@ def parse_pairs(raw_pairs, target_chain='A', binder_chain='B'):
 
     return list(residues)
 
+###########################################################################
+
+def parse_pairs_new(raw_pairs, target_chain='A', binder_chain='B'):
+    """
+    Parse BindCraft style contact pairs.
+    Example input:
+    [(('(A)',75,'ARG'), (28,'PHE')), (('(A)',78,'THR'), (35,'TRP'))]
+    Returns:
+       [('A',75), ('B',28), ('A',78), ('B',35)]
+    """
+    import ast
+
+    if raw_pairs is None:
+        return []
+
+    # Convert string → Python list
+    if isinstance(raw_pairs, str):
+        try:
+            pairs = ast.literal_eval(raw_pairs)
+        except Exception:
+            return []
+    else:
+        pairs = raw_pairs
+
+    residues = set()
+
+    #[(('(A)',75,'ARG'), (28,'PHE')), (('(A)',78,'THR'), (35,'TRP'))]
+    for left, right in pairs:
+        try:
+            # left = (75, 'ARG') → residue number = left[0]
+            res_target = int(left[1])
+            residues.add((target_chain, res_target))
+
+            # right = (28, 'PHE') → residue number = right[0]
+            res_binder = int(right[0])
+            residues.add((binder_chain, res_binder))
+
+        except Exception:
+            continue
+
+    return list(residues)
+
+#####################################
+
+def parse_pairs_virtual_multichain(raw_pairs, target_chain_letter='A', binder_chain='B', shift=0,
+                                   add_target_res_offset=0):
+    """
+    Parses contact pairs for virtual multi-chain targets where target chain A and B
+    are concatenated in the BindCraft PDB file.
+    """
+    import ast
+
+    if raw_pairs is None:
+        return []
+
+    if isinstance(raw_pairs, str):
+        try:
+            pairs = ast.literal_eval(raw_pairs)
+        except Exception:
+            return []
+    else:
+        pairs = raw_pairs
+
+    parsed_contacts = []
+
+    for left, right in pairs:
+        try:
+            # left[0] is the flag (' (A) ' or ' (B) ')
+            chain_flag = str(left[0]).strip().replace('(', '').replace(')', '').strip().upper()  # 'A' or 'B'
+            original_resi = int(left[1])  # Original un-shifted residue number
+
+            # right[0] is binder residue number
+            binder_resi = int(right[0])
+            b_chain = str(binder_chain).strip().upper()
+
+            # Calculate the actual residue number as it appears in the BindCraft PDB file
+            if chain_flag == 'A':
+                pdb_resi = original_resi + int(add_target_res_offset)
+            else:
+                pdb_resi = original_resi + int(add_target_res_offset) + int(shift)
+
+            parsed_contacts.append({
+                'display_chain': chain_flag,  # 'A' or 'B' (what Simon expects)
+                'display_resi': original_resi,  # Original residue number
+                'pdb_chain': str(target_chain_letter).strip().upper(),  # Chain in BindCraft PDB (e.g. 'A')
+                'pdb_resi': pdb_resi,  # Shifted residue number in BindCraft PDB
+                'binder_chain': b_chain,
+                'binder_resi': binder_resi
+            })
+        except Exception:
+            continue
+
+    return parsed_contacts
+
+
+
+
 import re
 
 def extract_design_id(pdb_filename):
