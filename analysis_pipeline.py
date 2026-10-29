@@ -17,30 +17,6 @@ from MDAnalysis.lib import distances
 
 # ----------------------------- Utility functions -----------------------------
 
-def shutil_which(name):
-    return which(name)
-
-
-def run_freesasa(pdb_path, out_txt):
-    """Run freesasa on pdb_path and write output to out_txt. Return True on success."""
-    cmd = ["freesasa", pdb_path, "-o", out_txt]
-    try:
-        r = subprocess.run(cmd, capture_output=True, text=True, check=True)
-        return True
-    except Exception as e:
-        return False
-
-
-def parse_freesasa_total(txt_path):
-    try:
-        with open(txt_path) as fh:
-            for line in fh:
-                if line.strip().upper().startswith("TOTAL"):
-                    parts = line.split()
-                    return float(parts[-1])
-    except Exception:
-        return None
-    return None
 
 ##################################################################################################
 ################################# Residue contacts #################################################
@@ -92,24 +68,8 @@ def residue_contacts(target_atoms, binder_atoms, cutoff=4.0, add_target_res_offs
         # Add to unique set of pairs
         if (resA_info, resB_info) not in pairs:
             pairs.add((resA_info, resB_info))
-            #pairs.add(dd)
 
-
-           # ta = target[a]
-           # bb = binder[b]
-            #print(
-               # f"Target {ta.resname}{ta.resid}:{ta.name}  —  Binder {bb.resname}{bb.resid}:{bb.name}  =  {d[a, b]:.2f} Å")
-            # print(f"Target {ta}:  —  Binder {bb}  =  {d[a,b]:.2f} Å")
-
-    #sorted_contacts = sorted(list(pairs), key=lambda x: (x[0][1], x[1][0]))
     sorted_contacts = sorted(list(pairs), key=lambda x: (x[0][0], x[0][1], x[1][0]))
-    # sorted_contacts = sorted(
-    #     pairs,
-    #     key=lambda x: (
-    #         0 if x[0][0] == "A" else 1,
-    #         x[0][1]
-    #     )
-    # )
     return sorted_contacts
 
 ##################################################################################################
@@ -120,7 +80,6 @@ def analyze_interactions(target_atoms, binder_atoms, add_target_res_offset=0,
         return [], [], []
 
     # Amino Acid Definitions
-    #HYDROPHOBIC_AAS = "VAL ILE LEU PHE MET TRP ALA PRO"
     POSITIVE_AAS = {'ARG', 'LYS'}
     NEGATIVE_AAS = {'ASP', 'GLU'}
 
@@ -461,7 +420,6 @@ def interface_contacts_res_numbers(pairs):
     else:
         interface_contacts = []
         for d in pairs:
-            #interface_contacts.append(d[0][0])
             interface_contacts.append(d[0][1])
         interface_contacts = sorted(list(set(interface_contacts)))
         return interface_contacts
@@ -501,15 +459,13 @@ def binder_analysis(binder):
 
 
     return hydrophobic_res, positive_res, negative_res, aromatic_res
-################################################################################################################
-################################################################################################################
+
 ################################################################################################################
 ################################################################################################################
 # ----------------------------- Main design analysis -----------------------------
 ################################################################################################################
 ################################################################################################################
-################################################################################################################
-################################################################################################################
+
 def analyze_design(pdb_path, target_chain='A', binder_chain='B', add_target_res_offset=0, freesasa_available=False, shift = 0,
                    tmpdir=None, dist_threshod=4.0):
     """Analyze a single design PDB file. Returns dict of computed metrics."""
@@ -577,8 +533,6 @@ def analyze_design(pdb_path, target_chain='A', binder_chain='B', add_target_res_
     interface_contacts_4A = interface_contacts_res_numbers(pairs4)
     interface_contacts_hypho = interface_contacts_res_numbers(hypho_list)
     interface_contacts_salt_bridge = interface_contacts_res_numbers(salt_bridge)
-                                                                                                        #pi_dist_cutoff=5.5
-
 
     pi_pi_contacts, cation_pi_contacts = analyze_pi_interactions_strict(target, binder, pi_dist_cutoff=5.0, cation_dist_cutoff=6.0,
                                    max_offset=1.39, shift = shift, add_target_res_offset = add_target_res_offset)
@@ -593,9 +547,6 @@ def analyze_design(pdb_path, target_chain='A', binder_chain='B', add_target_res_
     net_charged_estimated = len(positive_res) - len(negative_res)
 
 
-
-
-    #
     hydrophobic_res_interface = []
     for i in range(len(pairs4)):
         if pairs4[i][1] in hydrophobic_res:
@@ -713,9 +664,6 @@ def analyze_design(pdb_path, target_chain='A', binder_chain='B', add_target_res_
                                             'distance_A': round(float(dist), 2),
                                             'angle_deg': round(float(angle_deg), 1),
                                         })
-
-
-
 
 
                                 elif flag =='b':
@@ -924,50 +872,6 @@ def analyze_design(pdb_path, target_chain='A', binder_chain='B', add_target_res_
     out['n_target_interface_residues'] = len(target_res_set)
     out['n_binder_interface_residues'] = len(binder_res_set)
 
-    #### FINAL FIXED pLDDT SECTION (Matches BindCraft Scale & Interface) ####
-    # 1. Select Alpha Carbons (CA) for Target and Binder
-#    target_ca = u.select_atoms(f"(chainID {target_chain} or segid {target_chain}) and name CA")
-#    binder_ca = u.select_atoms(f"(chainID {binder_chain} or segid {binder_chain}) and name CA")
-
-    # 2. Get the Binder Average (Divided by 100 to match BindCraft scale 0-1)
-#    raw_binder = binder_ca.tempfactors.mean() if len(binder_ca) > 0 else 0
-#    avg_binder = raw_binder / 100.0
-
-    # 3. Extract residue lists from pairs4 (4.0A) to capture all interface positions
-#    target_interface_res = [p[0][0] for p in pairs4]
-#    binder_interface_res = [p[1][0] for p in pairs4]
-
-    # Calculate Interface pLDDT if we have touching residues
-#    if target_interface_res and binder_interface_res:
-#        target_i_atoms = u.select_atoms(
-#            f"(chainID {target_chain} or segid {target_chain}) and name CA and resid {' '.join(map(str, target_interface_res))}")
-#        binder_i_atoms = u.select_atoms(
-#            f"(chainID {binder_chain} or segid {binder_chain}) and name CA and resid {' '.join(map(str, binder_interface_res))}")
-
-#        interface_atoms = target_i_atoms + binder_i_atoms
-#        raw_interface = interface_atoms.tempfactors.mean() if len(interface_atoms) > 0 else 0
-#        avg_interface = raw_interface / 100.0
-#    else:
-#        avg_interface = 0.0
-
-    # 4. Save to output dictionary with BindCraft style scale
-    #out['Average-binder-pLDDT'] = round(float(avg_binder), 2)
-#    out['Average-pLDDT'] = round(float(avg_binder), 2)
-#    out['Average-i-pLDDT'] = round(float(avg_interface), 2)
-    #########################################################################
-    #########################################################################
-
-    # 4. H-bond-like Calculation
-    #hb_count, hb_pairs = count_hbond_like(target, binder, cutoff=3.5)
-    #out['hbond_like_count'] = hb_count
-    #out['hbond_pairs'] = hb_pairs
-
-    # 5. Clashes check
-    #try:
-        #clashes = count_clashes(u, cutoff=2.2)
-    #except Exception:
-        #clashes = None
-    #out['clash_count'] = clashes
 
     # 6. Sequences extraction
     out['target_seq'],_ = extract_sequence(target)
@@ -976,121 +880,4 @@ def analyze_design(pdb_path, target_chain='A', binder_chain='B', add_target_res_
 
     return out
 
-#######
 ######    FINISHED ##################################
-
-#####DRAFT
-# ----------------------------- CLI & main -----------------------------------
-
-# def main():
-#     parser = argparse.ArgumentParser(description='BindCraft analysis pipeline')
-#     parser.add_argument('--pdb_dir', required=True, help='Directory with design PDBs (Accepted/Ranked)')
-#     parser.add_argument('--csv', required=True, help='final_design_stats.csv path')
-#     parser.add_argument('--out_dir', required=True, help='Output directory for analysis')
-#     parser.add_argument('--target_chain', default='A', help='Target chain letter (default A)')
-#     parser.add_argument('--binder_chain', default='B', help='Binder chain letter (default B)')
-#     parser.add_argument('--add_target_res_offset', type=int, default=0, help='Add offset to target residue numbers if PDB numbering starts at higher value')
-#     parser.add_argument('--use_freesasa', action='store_true', help='Run freesasa to compute dSASA (requires freesasa on PATH)')
-#     parser.add_argument('--tmpdir', default=None, help='Temporary directory to write freesasa files')
-#     args = parser.parse_args()
-#
-#     os.makedirs(args.out_dir, exist_ok=True)
-#
-#     freesasa_available = False
-#     if args.use_freesasa and shutil_which('freesasa'):
-#         freesasa_available = True
-#     elif args.use_freesasa:
-#         print('WARNING: freesasa requested but not found on PATH. dSASA will be skipped.')
-#
-#     # read CSV metrics
-#     df = pd.read_csv(args.csv)
-#
-#     # collect PDB files in directory (match design names in CSV if possible)
-#     pdb_files = sorted([os.path.join(args.pdb_dir, f) for f in os.listdir(args.pdb_dir) if f.lower().endswith(('.pdb', '.cif'))])
-#
-#     results = []
-#     for pdb_path in pdb_files:
-#         print(f'Analyzing {os.path.basename(pdb_path)}...')
-#         r = analyze_design(pdb_path, target_chain=args.target_chain, binder_chain=args.binder_chain,
-#                            add_target_res_offset=args.add_target_res_offset,
-#                            freesasa_available=freesasa_available, tmpdir=args.tmpdir)
-#         # merge with CSV row (match by design id in filename)
-#         base = os.path.splitext(os.path.basename(pdb_path))[0]
-#         base = "_".join(base.split("_")[:-1])
-#         # try to find matching row in df by 'Design' or by filename substring
-#         matched_row = None
-#         if 'Design' in df.columns:
-#             # some CSVs have Design column like 'b_F_l75_s...' or similar
-#             m = df[df['Design'].astype(str).str.contains(base)]
-#             if len(m) == 1:
-#                 matched_row = m.iloc[0].to_dict()
-#         if matched_row is None:
-#             # fallback: try to find row whose Design equals base
-#             m = df[df['Design'].astype(str) == base]
-#             if len(m) == 1:
-#                 matched_row = m.iloc[0].to_dict()
-#         if matched_row is None:
-#             # no match — keep original df row if filename is same as index
-#             matched_row = {}
-#         # build final record
-#         record = {}
-#         record.update({'design_id': base})
-#         # include selected CSV columns if present
-#         for col in ['Average_pLDDT','Average_i_pLDDT','Average_pTM','Average_i_pTM','Average_pAE','Average_i_pAE','Average_dG','Average_dSASA','Average_Binder_pLDDT','Average_n_InterfaceResidues']:
-#             record[col] = matched_row.get(col, np.nan)
-#         # include structural outputs
-#         record['n_contacts_3A'] = r.get('n_contacts_3A')
-#         record['n_contacts_4A'] = r.get('n_contacts_4A')
-#         record['n_target_interface_residues'] = r.get('n_target_interface_residues')
-#         record['n_binder_interface_residues'] = r.get('n_binder_interface_residues')
-#         record['hbond_like_count'] = r.get('hbond_like_count')
-#         record['clash_count'] = r.get('clash_count')
-#         record['dsasa'] = r.get('dsasa')
-#         record['target_seq'] = r.get('target_seq')
-#         record['binder_seq'] = r.get('binder_seq')
-#
-#         results.append(record)
-#
-#         # write per-design short report
-#         rpt_lines = []
-#         rpt_lines.append(f"Design: {base}")
-#         rpt_lines.append("--- CSV metrics (if available) ---")
-#         for col in ['Average_pLDDT','Average_i_pLDDT','Average_pTM','Average_i_pAE','Average_i_pTM','Average_pAE','Average_dG','Average_dSASA','Average_Binder_pLDDT','Average_n_InterfaceResidues']:
-#             rpt_lines.append(f"{col}: {record.get(col)}")
-#         rpt_lines.append('')
-#         rpt_lines.append('--- Structural metrics (computed) ---')
-#         rpt_lines.append(f"n_contacts_3A: {record['n_contacts_3A']}")
-#         rpt_lines.append(f"n_contacts_4A: {record['n_contacts_4A']}")
-#         rpt_lines.append(f"n_target_interface_residues: {record['n_target_interface_residues']}")
-#         rpt_lines.append(f"n_binder_interface_residues: {record['n_binder_interface_residues']}")
-#         rpt_lines.append(f"hbond_like_count: {record['hbond_like_count']}")
-#         rpt_lines.append(f"clash_count: {record['clash_count']}")
-#         rpt_lines.append(f"dsasa: {record['dsasa']}")
-#         rpt_lines.append('')
-#         rpt_lines.append('Sequences:')
-#         rpt_lines.append(f"target_seq: {record['target_seq']}")
-#         rpt_lines.append(f"binder_seq: {record['binder_seq']}")
-#
-#         rpt_path = os.path.join(args.out_dir, f"{base}_report.txt")
-#         with open(rpt_path, 'w') as fh:
-#             fh.write('\n'.join(rpt_lines))
-#
-#     # write master CSV
-#     df_out = pd.DataFrame(results)
-#     out_csv = os.path.join(args.out_dir, 'bindcraft_analysis_summary.csv')
-#     df_out.to_csv(out_csv, index=False)
-#     print(f"Wrote summary CSV: {out_csv}")
-#
-#     # produce a simple ranking by i_pTM (csv metric) then dsasa then Average_pLDDT
-#     df_rank = df_out.copy()
-#     for col in ['Average_i_pTM','dsasa','Average_pLDDT']:
-#         if col not in df_rank.columns:
-#             df_rank[col] = np.nan
-#     df_rank = df_rank.sort_values(by=['Average_i_pTM','dsasa','Average_pLDDT'], ascending=[False, False, False])
-#     rank_csv = os.path.join(args.out_dir, 'bindcraft_ranked.csv')
-#     df_rank.to_csv(rank_csv, index=False)
-#     print(f"Wrote ranked CSV: {rank_csv}")
-#
-#
-# if __name__ == '__main__':
-#     main()

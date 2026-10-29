@@ -19,82 +19,8 @@ except ImportError:
 from analysis_pipeline import analyze_design
 from helper import *
 st.set_page_config(page_title="PDB Analyser", layout="wide")
-#col1, col2, col3 = st.columns(3)
 
-# Display an image in each column
-# with col1:
-#     st.image("uoa.jpg", width=100, use_container_width=True)
-#
-# with col3:
-#     st.image("image4.png", width=100, use_container_width=True)
-#st.image('uoa.jpg', width=200)
 st.title("PDB Analyser Web Application")
-################################################################################
-################################################################################
-def format_pairs(pairs):
-    if not pairs or pairs == 'nan':
-        return "None"
-    try:
-        #return " ".join([f"{a[0]} {a[1]} ↔ {b[0]} {b[1]}" for a, b in pairs])
-        #return " ".join([f"{a[0]} {a[1]} {a[2]}   ↔   {b[0]} {b[1]} {b[2]} \n" for a, b in pairs])
-        return " ".join([f"{a[0]}  {a[1]}  {a[2]} ({a[3]})    ↔   {b[0]} {b[1]}   ({b[2]})  \n" for a, b in pairs])
-
-    except Exception:
-        return str(pairs)
-
-def format_pairs_contacts_only(pairs):
-    if not pairs or pairs == 'nan':
-        return "None"
-    try:
-        return " ".join([f"{a[0]} {a[1]} {a[2]}   ↔   {b[0]} {b[1]} \n" for a, b in pairs])
-        #return " ".join([f"{a[0]} {a[1]} ** {a[2]}    ↔   {b[0]} {b[1]}  ** {b[2]}  \n" for a, b in pairs])
-
-    except Exception:
-        return str(pairs)
-
-def format_pairs_h_bonds_b_to_t(pairs):
-    if not pairs or pairs == 'nan':
-        return "None"
-    try:
-        return " ".join([f"  {a['donor'][0]} {a['donor'][1]} ({a['donor'][2]})    ->     {a['flag_target_chain']}    {a['acceptor'][0]} {a['acceptor'][1]} ({a['acceptor'][2]})    |    distance = {a['distance_A']} Å    |    Angle = {a['angle_deg']}  degree  \n" for a in pairs])
-    except Exception:
-        return str(pairs)
-
-def format_pairs_h_bonds_t_to_b(pairs):
-    if not pairs or pairs == 'nan':
-        return "None"
-    try:
-        return " ".join([f" {a['flag_target_chain']}   {a['donor'][0]} {a['donor'][1]} ({a['donor'][2]})    ->    {a['acceptor'][0]} {a['acceptor'][1]} ({a['acceptor'][2]})    |    distance = {a['distance_A']} Å     |    Angle = {a['angle_deg']}  degree  \n" for a in pairs])
-    except Exception:
-        return str(pairs)
-
-
-def format_pairs_pi_pi(pairs):
-    if not pairs or pairs == 'nan':
-        return "None"
-    try:
-        return " ".join([f" (target)  {a['target']}   ->     (binder)  {a['binder']}  |  distance = {round(a['distance_A'],2)} Å  |  offset = {a['offset_A']} | angle = {a['angle_deg']} degree  |  geometry = {a['geometry']}  \n" for a in pairs])
-    except Exception:
-        return str(pairs)
-
-def format_pairs_cation_pi(pairs):
-    if not pairs or pairs == 'nan':
-        return "None"
-    try:
-        return " ".join([f" Cation : {a['cation']}   ->   Aromatic : {a['aromatic']}  |  distance = {round(a['distance_A'],2)} Å  |  offset = {a['offset_A']} | angle = {a['theta_deg']} degree \n" for a in pairs])
-    except Exception:
-        return str(pairs)
-
-
-def format_pairs_binder(pairs):
-    if not pairs or pairs == 'nan':
-        return "None"
-    try:
-        return " ".join([f" {a} \n" for a in pairs])
-    except Exception:
-        return str(pairs)
-
-
 ################################################################################
 ################################################################################
 
@@ -115,7 +41,6 @@ if 'pdb_map' not in st.session_state:
 st.sidebar.header("Settings")
 target_chain = st.sidebar.text_input("Target Chain Letter", value="A")
 binder_chain = st.sidebar.text_input("Binder Chain Letter", value="B")
-#dist_threshod = st.sidebar.number_input("Salt bridge/Hydrophobic contacts distance cut off (Å) ", value=4)
 check_box_family = st.sidebar.checkbox('In all designs, target protein is same', value = True)
 check_box_bindcraft = st.sidebar.checkbox('All pdbs designed by BindCraft', value = False)
 check_box_multi_chain_target = st.sidebar.checkbox('Target has multi chain', value = False)
@@ -144,23 +69,12 @@ st.sidebar.caption(" [Linkedin Profile](https://www.linkedin.com/in/mj-shadfar-3
 st.sidebar.write(" [Github Repository](https://github.com/mj72git/PDB-Analyzer)")
 st.sidebar.caption("PDB Analyser v1.3")
 st.sidebar.caption("")
-st.sidebar.caption("Last modified: 28 Oct 2026")
+st.sidebar.caption("Last modified: 30 Oct 2026")
 st.set_page_config(page_title="PDB Analyser", layout="wide")
 st.sidebar.image("uoa.jpg", width=200)
 st.sidebar.image("image.png", width=150)
 
 
-
-
-# st.table(
-#     {
-#         ":material/folder: Project": "**Streamlit** - The fastest way to build data apps",
-#         ":material/code: Repository": "[github.com/streamlit/streamlit](https://github.com/streamlit/streamlit)",
-#         ":material/new_releases: Version": ":gray-badge[1.45.0]",
-#         ":material/license: License": ":green-badge[Apache 2.0]",
-#         ":material/group: Maintainers": ":blue-badge[Core Team] :violet-badge[Community]",
-#     },
-#     border="horizontal")
 #########################################################################################################
 ################################### FILE UPLOAD & ANALYSIS ##########################
 #########################################################################################################
@@ -174,18 +88,12 @@ if not st.session_state.analysis_done:
     st.markdown("##### Target protein should be one chain (supports virtual multi-chain targets merged in BindCraft output).")
     st.subheader("Upload Files")
     pdb_files = st.file_uploader("Upload PDB files", type=["pdb"], accept_multiple_files=True)
-    #csv_file = st.file_uploader("Upload design metrics CSV. (final_design_stats.csv)", type="csv")
 
-    #if pdb_files and csv_file:
     if pdb_files:
         st.success("Files uploaded successfully.")
         if st.button("Run Analysis"):
             tmpdir = tempfile.mkdtemp()
-            #freesasa_available = (os.system("which freesasa > /dev/null") == 0)
-            #csv_path = os.path.join(tmpdir, "metrics.csv")
-            #with open(csv_path, "wb") as f:
-                #f.write(csv_file.read())
-            #df_metrics = pd.read_csv(csv_path)
+
 
             results = []
             progress = st.progress(0)
@@ -197,29 +105,8 @@ if not st.session_state.analysis_done:
                 r = analyze_design(pdb_path, target_chain=target_chain, binder_chain=binder_chain,
                                    add_target_res_offset=add_target_res_offset,shift = shift, tmpdir=tmpdir,dist_threshod=4)
 
-                #base = os.path.splitext(os.path.basename(pdb_path))[0]  #omitt the .pdb
-                #base = "_".join(base.split("_")[:-1]) #or os.path.splitext(os.path.basename(pdb_path))[0]
-
-
-                ######## changed!
-                #base = extract_design_id(pdb.name)
                 # This removes the '.pdb' extension but leaves the rest of the filename completely intact
                 base = os.path.splitext(pdb.name)[0]
-                ########
-
-                
-                #base = "_".join(base.split("_")[:-1]) or os.path.splitext(os.path.basename(pdb_path))[0]
-                #matched_row = {}
-
-                #if 'Design' in df_metrics.columns:
-
-                    #m = df_metrics[df_metrics['Design'].astype(str).str.contains(base)]
-                    #if len(m) == 1:
-                        #matched_row = m.iloc[0].to_dict()
-                    #else:
-                        #m = df_metrics[df_metrics['Design'].astype(str) == base]
-                        #if len(m) == 1:
-                           # matched_row = m.iloc[0].to_dict()
 
                 try:
                     with open(pdb_path, "r") as fh:
@@ -230,42 +117,27 @@ if not st.session_state.analysis_done:
                 st.session_state.pdb_map[base] = pdb_text
 
                 record = {'design_id': base}
-                #for col in ['Average_pLDDT','Average_i_pLDDT','Average_pTM','Average_i_pTM','Average_pAE','Average_i_pAE','Average_dG','Average_dSASA','Average_Binder_pLDDT','Average_n_InterfaceResidues']:
-                    #record[col] = matched_row.get(col, np.nan)
                 record.update({
                     'binder_length' : r.get('binder_length'),
-        #            'Average_pLDDT' : r.get('Average-pLDDT'),
-                    #'Average_i_pLDDT' : r.get('Average-i-pLDDT'),
-                    #'Average_binder_pLDDT' : r.get('Average-binder-pLDDT'),
                     'n_contacts_3A_Atom': r.get('n_contacts_3A'),
                     'n_contacts_4A_Atom': r.get('n_contacts_4A'),
-                    #'n_target_interface_residues': r.get('n_target_interface_residues'),
-                    #'n_binder_interface_residues': r.get('n_binder_interface_residues'),
-                   # 'hbond_like_count': r.get('hbond_like_count'),
-                   # 'clash_count': r.get('clash_count'),
-                   # 'dsasa': r.get('dsasa'),
                     'target_seq': r.get('target_seq'),
                     'pairs_3A': r.get('pairs_3A'),
-                    #'pairs3_multi' : r.get('pairs3_multi'),
                     'pairs3_multichain_mode': r.get('pairs3_multi'),
                     '3A_Residues': r.get('3A_Residues'),
                     'n_contacts_3A_Residues' : r.get('n_contacts_3A_Residues'),
                     'pairs_4A': r.get('pairs_4A'),
-                   # 'pairs4_multi': r.get('pairs4_multi'),
                     'pairs4_multichain_mode': r.get('pairs4_multi'),
                     '4A_Residues': r.get('4A_Residues'),
                     'n_contacts_4A_Residues': r.get('n_contacts_4A_Residues'),
-                  #  'hbond_pairs': r.get('hbond_pairs')
                     'hydrophobic_contacts' : r.get('hypho'),
                     'n_hydrophobic_contacts_ATOM': r.get('n_hypho_list'),
                     'hydrophobic_contacts_Residues' : r.get('hypho_Residues'),
-                    #'hydrophobic_Residues_multi' : r.get('hypho_multi'),
                     'hydrophobic_Residues_multichain_mode': r.get('hypho_multi'),
                     'n_hydrophobic_contacts_Residues' : r.get('number_hydrophobic_contacts_Residues'),
                     'salt_bridge' : r.get('salt_bridge'),
                     'n_salt_bridge_ATOM': r.get('n_salt_bridge'),
                     'salt_bridge_contacts_Residues': r.get('salt_bridge_Residues'),
-                    #'salt_bridge_Residues_multi' : r.get('salt_bridge_multi'),
                     'salt_bridge_Residues_multichain_mode': r.get('salt_bridge_multi'),
                     'n_salt_bridge_Residues' : r.get('number_salt_bridge_Residues'),
                     'pi_pi_contacts' : r.get('pi_pi_contacts'),
@@ -299,10 +171,6 @@ if not st.session_state.analysis_done:
 
             st.session_state.df_out = pd.DataFrame(results)
             df_rank = st.session_state.df_out.copy()
-            #for col in ['hydrophobic_contacts_Residues']:     #'Average_pLDDT'
-                #if (col not in df_rank.columns) or (col not in df_out.columns):
-                  #  st.session_state.df_rank[col] = np.nan
-                  #  st.session_state.df_out[col] = np.nan
             st.session_state.df_rank = df_rank.sort_values(by=['n_contacts_3A_Atom','n_hydrophobic_contacts_ATOM','n_salt_bridge_ATOM','n_contacts_4A_Atom'], ascending=[False, False, False, False])
             st.session_state.analysis_done = True
             st.rerun()
@@ -343,9 +211,6 @@ if st.session_state.analysis_done and st.session_state.df_out is not None:
                 df_rank_display[col] = df_rank_display[col].apply(lambda x: str(x))
         st.dataframe(df_rank_display)
 
-        
-
-      
 
         st.download_button("Download Summary CSV", st.session_state.df_out.to_csv(index=False), "summary.csv")
         st.download_button("Download Ranked CSV", st.session_state.df_rank.to_csv(index=False), "ranked.csv")
@@ -356,104 +221,16 @@ if st.session_state.analysis_done and st.session_state.df_out is not None:
     with tab2:
         st.subheader("Visualizations")
 
+
+
         # ensure df is defined
         df = st.session_state.df_out
 
         # -------------------------------
-        # BAR PLOT (3Å & 4Å contacts)
-        # -------------------------------
-
-
-        if df is not None and df.shape[0] > 0:
-            fig_contacts = px.bar(
-                df,
-                x='design_id',
-                y='n_contacts_3A_Residues',
-                title='Number of Contacts (3Å)'
-            )
-            st.plotly_chart(fig_contacts, use_container_width=False)
-        else:
-            st.info("No data to plot. Please run analysis first.")
-
-        st.write("------------------------------------------------------------------------------------------")
-        if df is not None and df.shape[0] > 0:
-            fig_contacts = px.bar(
-                df,
-                x='design_id',
-                y='n_contacts_4A_Residues',
-                title='Number of Contacts (4Å)'
-            )
-            st.plotly_chart(fig_contacts, use_container_width=True)
-        else:
-            st.info("No data to plot. Please run analysis first.")
-
-        st.write("------------------------------------------------------------------------------------------")
-        if df is not None and df.shape[0] > 0:
-            fig_contacts = px.bar(
-                df,
-                x='design_id',
-                y='n_hydrophobic_contacts_Residues',
-                title='Number of hydrophobic Contacts '
-            )
-            st.plotly_chart(fig_contacts, use_container_width=True)
-        else:
-            st.info("No data to plot. Please run analysis first.")
-
-        st.write("------------------------------------------------------------------------------------------")
-        if df is not None and df.shape[0] > 0:
-            fig_contacts = px.bar(
-                df,
-                x='design_id',
-                y='n_salt_bridge_Residues',
-                title='Number of salt bridge contacts '
-            )
-            st.plotly_chart(fig_contacts, use_container_width=True)
-        else:
-            st.info("No data to plot. Please run analysis first.")
-
-        st.write("------------------------------------------------------------------------------------------")
-        if df is not None and df.shape[0] > 0:
-            fig_contacts_pi_pi = px.bar(
-                df,
-                x='design_id',
-                y='n_pi_pi_contacts',
-                title='Number of Pi_Pi contacts '
-            )
-            st.plotly_chart(fig_contacts_pi_pi, use_container_width=True)
-        else:
-            st.info("No data to plot. Please run analysis first.")
-
-        st.write("------------------------------------------------------------------------------------------")
-        if df is not None and df.shape[0] > 0:
-            fig_contacts_cation_pi = px.bar(
-                df,
-                x='design_id',
-                y='n_cation_pi_contacts',
-                title='Number of Cation_Pi contacts '
-            )
-            st.plotly_chart(fig_contacts_cation_pi, use_container_width=True)
-        else:
-            st.info("No data to plot. Please run analysis first.")
-
-        st.write("------------------------------------------------------------------------------------------")
-        if df is not None and df.shape[0] > 0:
-            fig_contacts_hb = px.bar(
-                df,
-                x='design_id',
-                y='Number of All H bonds',
-                title='Number of all H bonds '
-            )
-            st.plotly_chart(fig_contacts_hb, use_container_width=True)
-        else:
-            st.info("No data to plot. Please run analysis first.")
-
-
-###########################################################################################
-###########################################################################################
-        # -------------------------------
         # 3D STRUCTURE VIEWER
         # -------------------------------
-        st.subheader("3D Structure Viewer")
+        st.markdown('')
+        st.markdown("#### 3D Structure Viewer")
 
         if not py3dmol_available:
             st.error("py3Dmol is not installed.")
@@ -465,7 +242,7 @@ if st.session_state.analysis_done and st.session_state.df_out is not None:
                 selected_design = st.selectbox("Select a design", df['design_id'].tolist())
                 row = df[df['design_id'] == selected_design].iloc[0]
 
-############      ############     ############      ############
+                ############      ############     Single Chain      ############      ############
 
                 if not check_box_multi_chain_target:
 
@@ -475,7 +252,6 @@ if st.session_state.analysis_done and st.session_state.df_out is not None:
                         raw_pairs = None
 
                     # Parse contacts
-                    #contacts = parse_pairs(raw_pairs, target_chain=target_chain, binder_chain=binder_chain)
                     contacts = parse_pairs_new(raw_pairs, target_chain=target_chain, binder_chain=binder_chain)
 
                     # Apply target offset and normalize chains
@@ -484,7 +260,6 @@ if st.session_state.analysis_done and st.session_state.df_out is not None:
                     b_chain = str(binder_chain).strip().upper()
 
                     # pairs_4A are ALREADY offset correctly
-
 
                     for c, r in contacts:
                         try:
@@ -495,11 +270,6 @@ if st.session_state.analysis_done and st.session_state.df_out is not None:
                             contacts_offset.append((chain_norm, resi))
                         except:
                             continue
-
-                    #contacts_offset = [
-                        #(str(c).strip().upper(), int(r))
-                        #for c, r in contacts
-                    #]
 
                     # Prepare highlight lists for target and binder
                     highlight_target = [(c, r) for c, r in contacts_offset if c == t_chain]
@@ -514,7 +284,8 @@ if st.session_state.analysis_done and st.session_state.df_out is not None:
                                                     key=f"highlight_{selected_design}")
                     if highlight_binding:
                         show_sphere = st.checkbox("Show CPK sphere", value=False, key=f"show_sphere_{selected_design}")
-                    target_color = st.selectbox("Target Color", ["limegreen", "red", "orange", "magenta", "yellow", "cyan"],
+                    target_color = st.selectbox("Target Color",
+                                                ["limegreen", "red", "orange", "magenta", "yellow", "cyan"],
                                                 index=0, key=f"tcolor_{selected_design}")
                     binder_color = st.selectbox("Binder Color",
                                                 ["orange", "red", "deepskyblue", "magenta", "yellow", "cyan"], index=0,
@@ -523,7 +294,6 @@ if st.session_state.analysis_done and st.session_state.df_out is not None:
                     # Create viewer
                     view = py3Dmol.view(width=900, height=500)
                     view.addModel(pdb_text, 'pdb')
-                    #view.setBackgroundColor('0x303030')
                     background_color = st.selectbox("Background Color", ["black", "white", "grey", "cyan", "red"],
                                                     index=0,
                                                     key=f"background_color_{selected_design}")
@@ -562,64 +332,66 @@ if st.session_state.analysis_done and st.session_state.df_out is not None:
                                 )
 
                         if show_sphere:
-                            target_sphere_color = st.selectbox("Target Sphere Color", ["deepskyblueCarbon", "redCarbon", "orangeCarbon", "magentaCarbon", "yellowCarbon", "cyanCarbon", "spectrum"],
-                                                index=2, key=f"tscolor_{selected_design}")
-                            binder_sphere_color = st.selectbox("binder Sphere Color", ["limegreenCarbon", "redCarbon", "orangeCarbon", "magentaCarbon", "yellowCarbon", "cyanCarbon", "spectrum"],
-                                                index=0, key=f"bscolor_{selected_design}")
+                            target_sphere_color = st.selectbox("Target Sphere Color",
+                                                               ["deepskyblueCarbon", "redCarbon", "orangeCarbon",
+                                                                "magentaCarbon", "yellowCarbon", "cyanCarbon",
+                                                                "spectrum"],
+                                                               index=2, key=f"tscolor_{selected_design}")
+                            binder_sphere_color = st.selectbox("binder Sphere Color",
+                                                               ["limegreenCarbon", "redCarbon", "orangeCarbon",
+                                                                "magentaCarbon", "yellowCarbon", "cyanCarbon",
+                                                                "spectrum"],
+                                                               index=0, key=f"bscolor_{selected_design}")
                             for chain, resi in highlight_target:
                                 view.addStyle(
                                     {'chain': chain, 'resi': resi},
-                                    {'sphere': {'colorscheme': target_sphere_color,'scale':0.8}})
-                                    #{'sphere': {'colorscheme': 'greenCarbon','scale':0.8}})
-                                    #{'sphere': {'colorscheme': 'spectrum','scale':0.8}})
+                                    {'sphere': {'colorscheme': target_sphere_color, 'scale': 0.8}})
 
                             for chain, resi in highlight_binder:
                                 view.addStyle(
                                     {'chain': chain, 'resi': resi},
-                                    {'sphere': {'colorscheme': binder_sphere_color,'scale':0.8}})
-                                    #{'sphere': {'colorscheme': 'deepskyblueCarbon','scale':0.8}})
-                                    #{'sphere': {'colorscheme': 'greenCarbon','scale':0.8}})
+                                    {'sphere': {'colorscheme': binder_sphere_color, 'scale': 0.8}})
 
                     # Pass Python variables into JavaScript using f-string formatting
                     target_chain_str = str(target_chain).strip().upper()
                     binder_chain_str = str(binder_chain).strip().upper()
 
                     hover_callback = f"""
-                    function(atom, viewer, event, container) {{
-                        if (!atom.label) {{
-                            let labelText = '';
-                            let targetChain = '{target_chain_str}';
-                            let binderChain = '{binder_chain_str}';
+                            function(atom, viewer, event, container) {{
+                                if (!atom.label) {{
+                                    let labelText = '';
+                                    let targetChain = '{target_chain_str}';
+                                    let binderChain = '{binder_chain_str}';
 
-                            if (atom.chain === targetChain) {{
-                                labelText = atom.resn + ' ' + atom.resi + ' (Target Chain ' + targetChain + ')';
-                            }} else if (atom.chain === binderChain) {{
-                                labelText = atom.resn + ' ' + atom.resi + ' (binder)';
-                            }} else {{
-                                labelText = atom.resn + ' ' + atom.resi + ' (Chain ' + atom.chain + ')';
-                            }}
+                                    if (atom.chain === targetChain) {{
+                                        labelText = atom.resn + ' ' + atom.resi + ' (Target Chain ' + targetChain + ')';
+                                    }} else if (atom.chain === binderChain) {{
+                                        labelText = atom.resn + ' ' + atom.resi + ' (binder)';
+                                    }} else {{
+                                        labelText = atom.resn + ' ' + atom.resi + ' (Chain ' + atom.chain + ')';
+                                    }}
 
-                            atom.label = viewer.addLabel(
-                                labelText, 
-                                {{
-                                    position: atom, 
-                                    backgroundColor: 'black', 
-                                    fontColor: 'white',
-                                    fontSize: 12
+                                    atom.label = viewer.addLabel(
+                                        labelText, 
+                                        {{
+                                            position: atom, 
+                                            backgroundColor: 'black', 
+                                            fontColor: 'white',
+                                            fontSize: 12
+                                        }}
+                                    );
                                 }}
-                            );
-                        }}
-                    }}
-                    """
+                            }}
+                            """
 
                     unhover_callback = """
-                    function(atom, viewer, event, container) {
-                        if (atom.label) {
-                            viewer.removeLabel(atom.label);
-                            delete atom.label;
-                        }
-                    }
-                    """
+                            function(atom, viewer, event, container) {
+                                if (atom.label) {
+                                    viewer.removeLabel(atom.label);
+                                    delete atom.label;
+                                }
+                            }
+                            """
 
                     # Register the hover event globally for all atoms in the viewer
                     view.setHoverable({}, True, hover_callback, unhover_callback)
@@ -658,13 +430,8 @@ if st.session_state.analysis_done and st.session_state.df_out is not None:
                     pdb_text = st.session_state.pdb_map[selected_design]
 
                     # UI Controls for Multi-chain
-                    col_c1, col_c2, col_c3 = st.columns(3)
-                    #with col_c1:
-                        #show_target_A = st.checkbox("Show Target Chain A", value=True, key=f"show_tA_{selected_design}")
-                    with col_c1:
-                        show_target = st.checkbox("Show Target ", value=True, key=f"show_t_{selected_design}")
-                    with col_c1:
-                        show_binder = st.checkbox("Show Binder", value=True, key=f"show_binder_mc_{selected_design}")
+                    show_target = st.checkbox("Show Target ", value=True, key=f"show_t_{selected_design}")
+                    show_binder = st.checkbox("Show Binder", value=True, key=f"show_binder_mc_{selected_design}")
 
                     highlight_binding = st.checkbox("Highlight binding spots", value=True,
                                                     key=f"highlight_mc_{selected_design}")
@@ -673,12 +440,9 @@ if st.session_state.analysis_done and st.session_state.df_out is not None:
                                                   key=f"show_sphere_mc_{selected_design}")
 
                     color_t = st.selectbox("Target  Color",
-                                            ["limegreen", "red", "orange", "magenta", "yellow", "cyan"], index=0,
-                                            key=f"color_t_{selected_design}")
-                    #color_tB = st.selectbox("Target Chain B Color",
-                                            #["cyan", "limegreen", "red", "orange", "magenta", "yellow"], index=0,
-                                            #key=f"color_tB_{selected_design}")
-                    
+                                           ["limegreen", "red", "orange", "magenta", "yellow", "cyan"], index=0,
+                                           key=f"color_t_{selected_design}")
+
                     color_binder = st.selectbox("Binder Color",
                                                 ["orange", "red", "deepskyblue", "magenta", "yellow", "cyan"], index=0,
                                                 key=f"color_binder_mc_{selected_design}")
@@ -686,14 +450,13 @@ if st.session_state.analysis_done and st.session_state.df_out is not None:
                     # Create Py3Dmol viewer
                     view = py3Dmol.view(width=900, height=500)
                     view.addModel(pdb_text, 'pdb')
-                    #view.setBackgroundColor('0x303030')
 
-                    background_color = st.selectbox("Background Color", ["black", "white", "grey", "cyan", "red"], index = 0,
+                    background_color = st.selectbox("Background Color", ["black", "white", "grey", "cyan", "red"],
+                                                    index=0,
                                                     key=f"background_color_{selected_design}")
                     view.setBackgroundColor(background_color)
 
                     # Set cartoon styles for the target chain in PDB
-                    #show_target_A = show_target_B
                     if show_target:
                         view.setStyle({'chain': t_chain_letter}, {'cartoon': {'color': color_t}})
                     else:
@@ -733,7 +496,6 @@ if st.session_state.analysis_done and st.session_state.df_out is not None:
                                                                     "magentaCarbon", "yellowCarbon", "cyanCarbon",
                                                                     "spectrum"],
                                                                    index=0, key=f"bscolor_{selected_design}")
-                                
 
                                 for chain, resi in set(highlight_target_A):
                                     view.addStyle({'chain': chain, 'resi': resi},
@@ -749,58 +511,204 @@ if st.session_state.analysis_done and st.session_state.df_out is not None:
                     target_chain_str = str(target_chain).strip().upper()
                     binder_chain_str = str(binder_chain).strip().upper()
                     shift_val = int(shift)
-                    
 
                     hover_callback = f"""
-                    function(atom, viewer, event, container) {{
-                        if (!atom.label) {{
-                            let labelText = '';
-                            let targetChain = '{target_chain_str}';
-                            let binderChain = '{binder_chain_str}';
-                            let shiftVal = {shift_val};
-                            
+                            function(atom, viewer, event, container) {{
+                                if (!atom.label) {{
+                                    let labelText = '';
+                                    let targetChain = '{target_chain_str}';
+                                    let binderChain = '{binder_chain_str}';
+                                    let shiftVal = {shift_val};
 
-                            if (atom.chain === targetChain) {{
-                                if (atom.resi < shiftVal) {{
-                                    labelText = atom.resn + ' ' + atom.resi  + ' (Target Chain A)';
-                                }} else {{
-                                    let localResi = atom.resi - shiftVal;
-                                    labelText = atom.resn + ' ' + localResi + ' (Target Chain B)';
+
+                                    if (atom.chain === targetChain) {{
+                                        if (atom.resi < shiftVal) {{
+                                            labelText = atom.resn + ' ' + atom.resi  + ' (Target Chain A)';
+                                        }} else {{
+                                            let localResi = atom.resi - shiftVal;
+                                            labelText = atom.resn + ' ' + localResi + ' (Target Chain B)';
+                                        }}
+                                    }} else if (atom.chain === binderChain) {{
+                                        labelText = atom.resn + ' ' + atom.resi + ' (binder)';
+                                    }} else {{
+                                        labelText = atom.resn + ' ' + atom.resi + ' (Chain ' + atom.chain + ')';
+                                    }}
+
+                                    atom.label = viewer.addLabel(
+                                        labelText, 
+                                        {{
+                                            position: atom, 
+                                            backgroundColor: 'black', 
+                                            fontColor: 'white',
+                                            fontSize: 12
+                                        }}
+                                    );
                                 }}
-                            }} else if (atom.chain === binderChain) {{
-                                labelText = atom.resn + ' ' + atom.resi + ' (binder)';
-                            }} else {{
-                                labelText = atom.resn + ' ' + atom.resi + ' (Chain ' + atom.chain + ')';
                             }}
-
-                            atom.label = viewer.addLabel(
-                                labelText, 
-                                {{
-                                    position: atom, 
-                                    backgroundColor: 'black', 
-                                    fontColor: 'white',
-                                    fontSize: 12
-                                }}
-                            );
-                        }}
-                    }}
-                    """
+                            """
 
                     unhover_callback = """
-                    function(atom, viewer, event, container) {
-                        if (atom.label) {
-                            viewer.removeLabel(atom.label);
-                            delete atom.label;
-                        }
-                    }
-                    """
+                            function(atom, viewer, event, container) {
+                                if (atom.label) {
+                                    viewer.removeLabel(atom.label);
+                                    delete atom.label;
+                                }
+                            }
+                            """
 
                     view.setHoverable({}, True, hover_callback, unhover_callback)
                     view.zoomTo()
                     components.html(view._make_html(), height=500, width=900)
+        # -------------------------------
+        # BAR PLOT (3Å & 4Å contacts)
+        # -------------------------------
+        st.markdown("")
+        st.markdown("")
+        st.markdown('#### Contact plot for each design')
+
+        if df is not None and df.shape[0] > 0:
+            p = 'n_contacts_3A_Residues'
+            if df[p].sum() == 0:
+                st.info(f"No  3Å_contacts  found (0 contacts) for the analyzed designs.")
+            else:
+                n_designs = df.shape[0]
+
+                bar_width = 0.1 if n_designs < 3 else (0.2 if n_designs <= 5 else 0.21)
+
+                fig_contacts = px.bar(
+                    df,
+                    x='design_id',
+                    y='n_contacts_3A_Residues',
+                    title='Number of Contacts (3Å)'
+                )
+
+                fig_contacts.update_traces(width=bar_width)
+                st.plotly_chart(fig_contacts, use_container_width=False)
+        else:
+            st.info("No data to plot. Please run analysis first.")
+
+        st.write("------------------------------------------------------------------------------------------")
+        if df is not None and df.shape[0] > 0:
+            p = 'n_contacts_4A_Residues'
+            if df[p].sum() == 0:
+                st.info(f"No  4Å_contacts  found (0 contacts) for the analyzed designs.")
+            else:
+                n_designs = df.shape[0]
+
+                bar_width = 0.1 if n_designs < 3 else (0.2 if n_designs <= 5 else 0.21)
+
+                fig_contacts = px.bar(
+                    df,
+                    x='design_id',
+                    y='n_contacts_4A_Residues',
+                    title='Number of Contacts (4Å)'
+                )
+
+                fig_contacts.update_traces(width=bar_width)
+                st.plotly_chart(fig_contacts, use_container_width=False)
+        else:
+            st.info("No data to plot. Please run analysis first.")
+
+        st.write("------------------------------------------------------------------------------------------")
+        if df is not None and df.shape[0] > 0:
+            p = 'n_hydrophobic_contacts_Residues'
+            if df[p].sum() == 0:
+                st.info(f"No  hydrophobic_contacts  found (0 contacts) for the analyzed designs.")
+            else:
+                n_designs = df.shape[0]
+
+                bar_width = 0.1 if n_designs < 3 else (0.2 if n_designs <= 5 else 0.21)
+                fig_contacts = px.bar(
+                    df,
+                    x='design_id',
+                    y='n_hydrophobic_contacts_Residues',
+                    title='Number of hydrophobic Contacts '
+                )
+                fig_contacts.update_traces(width=bar_width)
+                st.plotly_chart(fig_contacts, use_container_width=True)
+        else:
+            st.info("No data to plot. Please run analysis first.")
+
+        st.write("------------------------------------------------------------------------------------------")
+        if df is not None and df.shape[0] > 0:
+            p = 'n_salt_bridge_Residues'
+            if df[p].sum() == 0:
+                st.info(f"No  salt_bridge contacts  found (0 contacts) for the analyzed designs.")
+            else:
+                n_designs = df.shape[0]
+
+                bar_width = 0.1 if n_designs < 3 else (0.2 if n_designs <= 5 else 0.21)
+                fig_contacts = px.bar(
+                    df,
+                    x='design_id',
+                    y='n_salt_bridge_Residues',
+                    title='Number of salt bridge contacts '
+                )
+                fig_contacts.update_traces(width=bar_width)
+                st.plotly_chart(fig_contacts, use_container_width=False)
+        else:
+            st.info("No data to plot. Please run analysis first.")
+
+        st.write("------------------------------------------------------------------------------------------")
+        if df is not None and df.shape[0] > 0:
+            p = 'n_pi_pi_contacts'
+            if df[p].sum() == 0:
+                st.info(f"No  pi_pi_contacts  found (0 contacts) for the analyzed designs.")
+            else:
+                n_designs = df.shape[0]
+
+                bar_width = 0.1 if n_designs < 3 else (0.2 if n_designs <= 5 else 0.21)
+                fig_contacts_pi_pi = px.bar(
+                    df,
+                    x='design_id',
+                    y='n_pi_pi_contacts',
+                    title='Number of Pi_Pi contacts '
+                )
+                fig_contacts_pi_pi.update_traces(width=bar_width)
+                st.plotly_chart(fig_contacts_pi_pi, use_container_width=False)
+        else:
+            st.info("No data to plot. Please run analysis first.")
+
+        st.write("------------------------------------------------------------------------------------------")
+        if df is not None and df.shape[0] > 0:
+            p = 'n_cation_pi_contacts'
+            if df[p].sum() == 0:
+                st.info(f"No  cation_pi_contacts  found (0 contacts) for the analyzed designs.")
+            else:
+                n_designs = df.shape[0]
+
+                bar_width = 0.1 if n_designs < 3 else (0.2 if n_designs <= 5 else 0.21)
+                fig_contacts_cation_pi = px.bar(
+                    df,
+                    x='design_id',
+                    y='n_cation_pi_contacts',
+                    title='Number of Cation_Pi contacts '
+                )
+                fig_contacts_cation_pi.update_traces(width=bar_width)
+
+                st.plotly_chart(fig_contacts_cation_pi, use_container_width=False)
+        else:
+            st.info("No data to plot. Please run analysis first.")
+
+        st.write("------------------------------------------------------------------------------------------")
+        if df is not None and df.shape[0] > 0:
+            n_designs = df.shape[0]
+
+            bar_width = 0.1 if n_designs < 3 else (0.2 if n_designs <= 5 else 0.21)
+            fig_contacts_hb = px.bar(
+                df,
+                x='design_id',
+                y='Number of All H bonds',
+                title='Number of all H bonds '
+            )
+            fig_contacts_hb.update_traces(width=bar_width)
+            st.plotly_chart(fig_contacts_hb, use_container_width=False)
+        else:
+            st.info("No data to plot. Please run analysis first.")
 
 
-
+###########################################################################################
+##########################################################################################
 
 
 
@@ -817,23 +725,17 @@ if st.session_state.analysis_done and st.session_state.df_out is not None:
                 st.text(f"Binder: {row['binder_seq']}")
                 pdb_text = st.session_state.pdb_map[row['design_id']]
                 st.text('')
-                #d = format_pairs_with_distance(row['pairs_3A'], pdb_text)
-                #st.write("**Contacts (2Å)**")
-               # st.text(format_pairs(row['pairs_2A']))
                 st.write("**H-bonds**")
-                #st.text(f"hbonds_target_to_binder : {row['hbonds_target_to_binder']}")
                 st.write("***Target -> Binder***")
                 st.text(format_pairs_h_bonds_t_to_b(row['hbonds_target_to_binder']))
                 st.text('')
                 st.write("***Binder -> Target***")
                 st.text(format_pairs_h_bonds_b_to_t(row['hbonds_binder_to_target']))
 
-                #st.text(f"hbonds_binder_to_target : {row['hbonds_binder_to_target']}")
                 st.write("------------------------------------------------------------------")
                 st.write("**Contacts (3Å)**")
                 st.write("***(Target Residues  ↔  binder residues)***")
                 st.text(format_pairs_contacts_only(row['pairs_3A']))
-                #st.text(format_pairs_with_distance(row['pairs_3A'], pdb_text, target_chain, binder_chain, add_target_res_offset))
                 st.write("------------------------------------------------------------------")
                 st.write("**hydrophobic contacts**")
                 st.text(format_pairs(row['hydrophobic_contacts']))
@@ -843,17 +745,14 @@ if st.session_state.analysis_done and st.session_state.df_out is not None:
                 st.write("------------------------------------------------------------------")
                 st.write("**pi_pi_contacts**")
                 st.text(format_pairs_pi_pi(row['pi_pi_contacts']))
-                #st.text(row['pi_pi_contacts'])
                 st.write("------------------------------------------------------------------")
                 st.write("**cation_pi_contacts**")
                 st.text(format_pairs_cation_pi(row['cation_pi_contacts']))
-                #st.text(row['cation_pi_contacts'])
                 st.write("------------------------------------------------------------------")
                 st.write("------------------------------------------------------------------")
                 st.write("**Contacts (4Å)**")
                 st.write("***(Target Residues   ↔   binder residues)***")
                 st.text(format_pairs_contacts_only(row['pairs_4A']))
-                #st.text(format_pairs_with_distance(row['pairs_4A'], pdb_text, target_chain, binder_chain, add_target_res_offset))
                 st.write("------------------------------------------------------------------")
 ############################################################################################################################
 ############################################################################################################################
@@ -912,58 +811,93 @@ if st.session_state.analysis_done and st.session_state.df_out is not None:
         # ensure df is defined
         df = st.session_state.df_out
 
-        # -------------------------------
-        # BAR PLOT (4Å contacts)
-        # -------------------------------
-
 
         if df is not None and df.shape[0] > 0:
-            fig_contacts_h = px.bar(
-                df,
-                x='design_id',
-                y='binder_hydrophobic_res_fraction',
-                title='        Binder Hydrophobicity for all designs (%)'
-            )
-            st.plotly_chart(fig_contacts_h, use_container_width=False)
+            p = 'binder_hydrophobic_res_fraction'
+            if df[p].sum() == 0:
+                st.info(f"No  hydrophobic Residues  found  for the analyzed binder designs.")
+            else:
+                n_designs = df.shape[0]
+
+                bar_width = 0.1 if n_designs < 3 else (0.2 if n_designs <= 5 else 0.21)
+
+                fig_contacts = px.bar(
+                    df,
+                    x='design_id',
+                    y='binder_hydrophobic_res_fraction',
+                    title='        Binder Hydrophobicity for all designs (%)'
+                )
+
+                fig_contacts.update_traces(width=bar_width)
+                st.plotly_chart(fig_contacts, use_container_width=False)
         else:
             st.info("No data to plot. Please run analysis first.")
 
         st.write("------------------------------------------------------------------------------------------")
         if df is not None and df.shape[0] > 0:
-            fig_contacts_bc = px.bar(
-                df,
-                x='design_id',
-                y='binder_positive_res_fraction',
-                title='        Binder Basic Residues for all designs (%)'
-            )
-            st.plotly_chart(fig_contacts_bc, use_container_width=True)
+            p = 'binder_positive_res_fraction'
+            if df[p].sum() == 0:
+                st.info(f"No  Positive Charged Residues  found  for the analyzed binder designs.")
+            else:
+                n_designs = df.shape[0]
+
+                bar_width = 0.1 if n_designs < 3 else (0.2 if n_designs <= 5 else 0.21)
+
+                fig_contacts_bc = px.bar(
+                    df,
+                    x='design_id',
+                    y='binder_positive_res_fraction',
+                    title='        Binder Basic Residues for all designs (%)'
+                )
+
+                fig_contacts_bc.update_traces(width=bar_width)
+                st.plotly_chart(fig_contacts_bc, use_container_width=False)
         else:
             st.info("No data to plot. Please run analysis first.")
 
         st.write("------------------------------------------------------------------------------------------")
 
         if df is not None and df.shape[0] > 0:
-            fig_contacts_ac = px.bar(
-                df,
-                x='design_id',
-                y='binder_negative_res_fraction',
-                title='        Binder Acidic Residues for all designs (%)'
-            )
-            st.plotly_chart(fig_contacts_ac, use_container_width=True)
+            p = 'binder_negative_res_fraction'
+            if df[p].sum() == 0:
+                st.info(f"No  Negative Charged Residues  found  for the analyzed binder designs.")
+            else:
+                n_designs = df.shape[0]
+
+                bar_width = 0.1 if n_designs < 3 else (0.2 if n_designs <= 5 else 0.21)
+
+                fig_contacts_ac = px.bar(
+                    df,
+                    x='design_id',
+                    y='binder_negative_res_fraction',
+                    title='        Binder Acidic Residues for all designs (%)'
+                )
+
+                fig_contacts_ac.update_traces(width=bar_width)
+                st.plotly_chart(fig_contacts_ac, use_container_width=False)
         else:
             st.info("No data to plot. Please run analysis first.")
 
         st.write("------------------------------------------------------------------------------------------")
 
-
         if df is not None and df.shape[0] > 0:
-            fig_contacts_ar = px.bar(
-                df,
-                x='design_id',
-                y='binder_aromatic_res_fraction',
-                title='        Binder Aromatic Residues for all designs (%)'
-            )
-            st.plotly_chart(fig_contacts_ar, use_container_width=True)
+            p = 'binder_aromatic_res_fraction'
+            if df[p].sum() == 0:
+                st.info(f"No  Aromatic Residues  found  for the analyzed binder designs.")
+            else:
+                n_designs = df.shape[0]
+
+                bar_width = 0.1 if n_designs < 3 else (0.2 if n_designs <= 5 else 0.21)
+
+                fig_contacts_ar = px.bar(
+                    df,
+                    x='design_id',
+                    y='binder_aromatic_res_fraction',
+                    title='        Binder Aromatic Residues for all designs (%)'
+                )
+
+                fig_contacts_ar.update_traces(width=bar_width)
+                st.plotly_chart(fig_contacts_ar, use_container_width=False)
         else:
             st.info("No data to plot. Please run analysis first.")
 
@@ -1001,10 +935,6 @@ if st.session_state.analysis_done and st.session_state.df_out is not None:
                         del dict_res[i + 1]
                 return dict_res
 
-
-
-
-
             analysis_final_3A = analysis_final('3A_Residues')
             analysis_final_4A = analysis_final('4A_Residues')
             analysis_final_hydrophobic = analysis_final('hydrophobic_contacts_Residues')
@@ -1022,7 +952,6 @@ if st.session_state.analysis_done and st.session_state.df_out is not None:
             # Frequency of target residues at the 3 Å interface
 
             # Assumes target PDB numbering starts at 1.
-            # add_target_res_offset makes the numbering match the original CapRel sequence.
             resname_by_resid = {
                 position + 1 : one_to_three.get(aa, "UNK")
                 for position, aa in enumerate(target_sequence)
@@ -1062,7 +991,7 @@ if st.session_state.analysis_done and st.session_state.df_out is not None:
                     margin=dict(b=140),
                 )
 
-                st.plotly_chart(fig_contacts, use_container_width=True)
+                st.plotly_chart(fig_contacts, use_container_width=False)
             else:
                 st.info("No 3Å contacts found across the loaded designs.")
              #########################################################################
@@ -1101,19 +1030,16 @@ if st.session_state.analysis_done and st.session_state.df_out is not None:
                     margin=dict(b=140),
                 )
 
-                st.plotly_chart(fig_contacts4, use_container_width=True)
+                st.plotly_chart(fig_contacts4, use_container_width=False)
             else:
                 st.info("No 4Å contacts found across the loaded designs.")
 
-            #st.write('Residues in 4A interface')
-            #st.write(analysis_final_4A)
 
             #####################################################################################
             #####################################################################################
             # Frequency of target residues at the Hydrophobic contacts  4Å interface
 
             # Assumes target PDB numbering starts at 1.
-            # add_target_res_offset makes the numbering match the original CapRel sequence.
             resname_by_resid = {
                 position + 1: one_to_three.get(aa, "UNK")
                 for position, aa in enumerate(target_sequence)
@@ -1153,7 +1079,7 @@ if st.session_state.analysis_done and st.session_state.df_out is not None:
                     margin=dict(b=140),
                 )
 
-                st.plotly_chart(fig_contacts_hypho, use_container_width=True)
+                st.plotly_chart(fig_contacts_hypho, use_container_width=False)
             else:
                 st.info("No hydrophobic contacts found across the loaded designs.")
             #####################################################################################
@@ -1161,7 +1087,6 @@ if st.session_state.analysis_done and st.session_state.df_out is not None:
             # Frequency of target residues at the salt bridge  4Å interface
 
             # Assumes target PDB numbering starts at 1.
-            # add_target_res_offset makes the numbering match the original CapRel sequence.
             resname_by_resid = {
                 position + 1: one_to_three.get(aa, "UNK")
                 for position, aa in enumerate(target_sequence)
@@ -1201,13 +1126,11 @@ if st.session_state.analysis_done and st.session_state.df_out is not None:
                     margin=dict(b=140),
                 )
 
-                st.plotly_chart(fig_contacts_salt_bridge, use_container_width=True)
+                st.plotly_chart(fig_contacts_salt_bridge, use_container_width=False)
             else:
                 st.info("No salt bridge contacts found across the loaded designs.")
         ######### ######### ######### ######### ######### ######### ######### #########
-        #########     MULTI chain target   =========
-        ######### ######### ######### ######### ######### ######### ######### #########
-        ######### ######### ######### ######### ######### ######### ######### #########
+        #########     MULTI chain target   #########
         ######### ######### ######### ######### ######### ######### ######### #########
 
         elif not check_box_family:
@@ -1219,7 +1142,6 @@ if st.session_state.analysis_done and st.session_state.df_out is not None:
             st.subheader("Overall Analysis of Designs for multichain target")
 
 
-            #def analysis_final(df_col_name):
             def analysis_final_multi(df_col_name):
                 analysis_final_multi = []
                 for _, row in st.session_state.df_out.iterrows():
@@ -1233,7 +1155,6 @@ if st.session_state.analysis_done and st.session_state.df_out is not None:
                 dict_res_A = {}
                 dict_res_B = {}
 
-                #
                 for i in range(chain_A_length):
                     dict_res_A[(' (A) ',i + 1)] = 0
 
@@ -1243,14 +1164,6 @@ if st.session_state.analysis_done and st.session_state.df_out is not None:
 
                 dict_res = {}
                 dict_res = {**dict_res_A, **dict_res_B}
-                #
-                # for chain, res in dict_res:
-                #     dict_res[(chain, res + 1)] = analysis_final_one_dim_multi.count(list(dict_res.keys())[(chain, res)])
-                #
-                # for chain, res in dict_res:
-                #     if dict_res[chain, res + 1] == 0:
-                #         del dict_res[chain, res + 1]
-                #         pass
 
                 # Create a new dictionary or update the existing one safely
                 updated_dict = {}
@@ -1270,13 +1183,8 @@ if st.session_state.analysis_done and st.session_state.df_out is not None:
                 return dict_res
                 #return analysis_final_one_dim_multi
 
-
-      
-
             analysis_final_multi_3A = analysis_final_multi('pairs3_multichain_mode')
             analysis_final_multi_4A = analysis_final_multi('pairs4_multichain_mode')
-
-            #st.write(analysis_final_multi_3A)
 
             analysis_final_multi_hydrophobic = analysis_final_multi('hydrophobic_Residues_multichain_mode')
             analysis_final_multi_salt_bridge = analysis_final_multi('salt_bridge_Residues_multichain_mode')
@@ -1308,7 +1216,7 @@ if st.session_state.analysis_done and st.session_state.df_out is not None:
                 target_sequence = st.session_state.df_out['target_seq'][0]
 
                 # 2. Build mapping considering your chain length and shift logic
-                # Chain A goes from 1 up to chain_A_length (254)
+                # Chain A goes from 1 up to chain_A_length (e.g. 254)
                 # Chain B residues in PDB have had 'shift' added or are mapped back using your shift rules
 
                 resname_by_resid = {}
@@ -1323,7 +1231,7 @@ if st.session_state.analysis_done and st.session_state.df_out is not None:
                 for idx, aa in enumerate(target_sequence):
                     amino_acid = one_to_three.get(aa, "UNK")
                     if idx < chain_A_length:
-                        # Chain A: 1 to 254
+                        # Chain A: 1 to chain_A_length
                         res_num = idx + 1
                         resname_by_resid[(' (A) ', res_num)] = amino_acid
                     else:
@@ -1380,7 +1288,7 @@ if st.session_state.analysis_done and st.session_state.df_out is not None:
                 target_sequence = st.session_state.df_out['target_seq'][0]
 
                 # 2. Build mapping considering your chain length and shift logic
-                # Chain A goes from 1 up to chain_A_length (254)
+                # Chain A goes from 1 up to chain_A_length
                 # Chain B residues in PDB have had 'shift' added or are mapped back using your shift rules
 
                 resname_by_resid = {}
@@ -1395,7 +1303,7 @@ if st.session_state.analysis_done and st.session_state.df_out is not None:
                 for idx, aa in enumerate(target_sequence):
                     amino_acid = one_to_three.get(aa, "UNK")
                     if idx < chain_A_length:
-                        # Chain A: 1 to 254
+                        # Chain A: 1 to chain_A_length
                         res_num = idx + 1
                         resname_by_resid[(' (A) ', res_num)] = amino_acid
                     else:
@@ -1429,7 +1337,7 @@ if st.session_state.analysis_done and st.session_state.df_out is not None:
                     margin=dict(b=140),
                 )
 
-                st.plotly_chart(fig_contacts_4, use_container_width=True)
+                st.plotly_chart(fig_contacts_4, use_container_width=False)
             else:
                 st.info("No 4Å contacts found across the loaded designs.")
 
@@ -1452,7 +1360,7 @@ if st.session_state.analysis_done and st.session_state.df_out is not None:
                 target_sequence = st.session_state.df_out['target_seq'][0]
 
                 # 2. Build mapping considering your chain length and shift logic
-                # Chain A goes from 1 up to chain_A_length (254)
+                # Chain A goes from 1 up to chain_A_length
                 # Chain B residues in PDB have had 'shift' added or are mapped back using your shift rules
 
                 resname_by_resid = {}
@@ -1467,7 +1375,7 @@ if st.session_state.analysis_done and st.session_state.df_out is not None:
                 for idx, aa in enumerate(target_sequence):
                     amino_acid = one_to_three.get(aa, "UNK")
                     if idx < chain_A_length:
-                        # Chain A: 1 to 254
+                        # Chain A: 1 to chain_A_length
                         res_num = idx + 1
                         resname_by_resid[(' (A) ', res_num)] = amino_acid
                     else:
@@ -1501,7 +1409,7 @@ if st.session_state.analysis_done and st.session_state.df_out is not None:
                     margin=dict(b=140),
                 )
 
-                st.plotly_chart(fig_contacts_hypho, use_container_width=True)
+                st.plotly_chart(fig_contacts_hypho, use_container_width=False)
             else:
                 st.info("No Hydrophobic contacts found across the loaded designs.")
             ###########################################################################
@@ -1524,7 +1432,7 @@ if st.session_state.analysis_done and st.session_state.df_out is not None:
                 target_sequence = st.session_state.df_out['target_seq'][0]
 
                 # 2. Build mapping considering your chain length and shift logic
-                # Chain A goes from 1 up to chain_A_length (254)
+                # Chain A goes from 1 up to chain_A_length
                 # Chain B residues in PDB have had 'shift' added or are mapped back using your shift rules
 
                 resname_by_resid = {}
@@ -1539,7 +1447,7 @@ if st.session_state.analysis_done and st.session_state.df_out is not None:
                 for idx, aa in enumerate(target_sequence):
                     amino_acid = one_to_three.get(aa, "UNK")
                     if idx < chain_A_length:
-                        # Chain A: 1 to 254
+                        # Chain A: 1 to chain_A_length
                         res_num = idx + 1
                         resname_by_resid[(' (A) ', res_num)] = amino_acid
                     else:
@@ -1573,7 +1481,7 @@ if st.session_state.analysis_done and st.session_state.df_out is not None:
                     margin=dict(b=140),
                 )
 
-                st.plotly_chart(fig_contacts_sb, use_container_width=True)
+                st.plotly_chart(fig_contacts_sb, use_container_width=False)
             else:
                 st.info("No Salt Bridge contacts found across the loaded designs.")
 
@@ -1587,7 +1495,7 @@ if st.session_state.analysis_done and st.session_state.df_out is not None:
         st.subheader("Filter your designs")
         col1, col2 = st.columns([1, 2])
         with col1:
-                            # 'Average_pLDDT',
+
             st.markdown("##### Designs Filtered by Selected Metric(s)")
             filters = [ 'n_contacts_3A_Residues', 'n_contacts_4A_Residues',
                        'Number of All H bonds','n_hydrophobic_contacts_ATOM', 'n_hydrophobic_contacts_Residues',
@@ -1595,10 +1503,7 @@ if st.session_state.analysis_done and st.session_state.df_out is not None:
                        'binder_hydrophobic_res_fraction_interface', 'binder_positive_res_fraction', 'binder_positive_res_fraction_interface',
                        'binder_negative_res_fraction','binder_negative_res_fraction_interface','binder_aromatic_res_fraction',
                        'binder_aromatic_res_fraction_interface']
-            # cutoffs = [0.9, 0.8, 0.7, 0.5, 0.7, 0.2, 0.13, -70]
-            # aa = []
 
-            # final_filters = dict(zip(filters,cutoffs))
             df_final = st.session_state.df_out.copy()
 
             for filter in filters:
@@ -1612,8 +1517,6 @@ if st.session_state.analysis_done and st.session_state.df_out is not None:
 
                     elif ('fraction' in filter):
                         cutoff = st.slider("Choose your cutoff (%)  : ", 0, 100, 5, key=f"slider_{filter}")
-                        #cutoff = cutoff / 100
-                        # aa.append(cutoff)
                         df_final = df_final[df_final[filter] >= cutoff]
 
 
@@ -1641,14 +1544,13 @@ if st.session_state.analysis_done and st.session_state.df_out is not None:
 
         with col2:
             st.markdown("##### Recommended designs based on filters: ")
-            #for c in ['pairs_3A', 'pairs_4A', 'hydrophobic_contacts']:
             for c in df_final.columns:
                 if c in df_final.columns:
                     df_final[c] = df_final[c].astype(str)
             # Save to session state so Streamlit tracks it
             st.session_state.df_final = df_final
             st.dataframe(df_final)
-            #df_final
+
             if st.session_state.df_final is not None:
                 st.download_button(
                     label="Download Filtered CSV",
@@ -1656,13 +1558,6 @@ if st.session_state.analysis_done and st.session_state.df_out is not None:
                     file_name="Filtered_Designs.csv",
                     mime="text/csv",
                 )
-            #st.download_button("Download Ranked CSV", st.session_state.df_rank.to_csv(index=False), "ranked.csv")
-
-
-
-
-
-
 
     if st.sidebar.button(" RESET "):
         st.session_state.df_out = None
@@ -1676,4 +1571,3 @@ else:
     st.info("Please upload PDB files. ")
     blankk = st.header("")
     st.markdown("#### Before starting, it is recommended to download and read the tutorial")
-
