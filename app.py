@@ -645,7 +645,7 @@ if st.session_state.analysis_done and st.session_state.df_out is not None:
                 )
 
                 fig_contacts.update_traces(width=bar_width)
-                st.plotly_chart(fig_contacts, use_container_width=False)
+                st.plotly_chart(fig_contacts, use_container_width=True)
         else:
             st.info("No data to plot. Please run analysis first.")
 
@@ -667,7 +667,7 @@ if st.session_state.analysis_done and st.session_state.df_out is not None:
                 )
 
                 fig_contacts.update_traces(width=bar_width)
-                st.plotly_chart(fig_contacts, use_container_width=False)
+                st.plotly_chart(fig_contacts, use_container_width=True)
         else:
             st.info("No data to plot. Please run analysis first.")
 
@@ -707,7 +707,7 @@ if st.session_state.analysis_done and st.session_state.df_out is not None:
                     title='Number of salt bridge contacts '
                 )
                 fig_contacts.update_traces(width=bar_width)
-                st.plotly_chart(fig_contacts, use_container_width=False)
+                st.plotly_chart(fig_contacts, use_container_width=True)
         else:
             st.info("No data to plot. Please run analysis first.")
 
@@ -727,7 +727,7 @@ if st.session_state.analysis_done and st.session_state.df_out is not None:
                     title='Number of Pi_Pi contacts '
                 )
                 fig_contacts_pi_pi.update_traces(width=bar_width)
-                st.plotly_chart(fig_contacts_pi_pi, use_container_width=False)
+                st.plotly_chart(fig_contacts_pi_pi, use_container_width=True)
         else:
             st.info("No data to plot. Please run analysis first.")
 
@@ -748,7 +748,7 @@ if st.session_state.analysis_done and st.session_state.df_out is not None:
                 )
                 fig_contacts_cation_pi.update_traces(width=bar_width)
 
-                st.plotly_chart(fig_contacts_cation_pi, use_container_width=False)
+                st.plotly_chart(fig_contacts_cation_pi, use_container_width=True)
         else:
             st.info("No data to plot. Please run analysis first.")
 
@@ -891,7 +891,7 @@ if st.session_state.analysis_done and st.session_state.df_out is not None:
                 )
 
                 fig_contacts.update_traces(width=bar_width)
-                st.plotly_chart(fig_contacts, use_container_width=False)
+                st.plotly_chart(fig_contacts, use_container_width=True)
         else:
             st.info("No data to plot. Please run analysis first.")
 
@@ -913,7 +913,7 @@ if st.session_state.analysis_done and st.session_state.df_out is not None:
                 )
 
                 fig_contacts_bc.update_traces(width=bar_width)
-                st.plotly_chart(fig_contacts_bc, use_container_width=False)
+                st.plotly_chart(fig_contacts_bc, use_container_width=True)
         else:
             st.info("No data to plot. Please run analysis first.")
 
@@ -936,7 +936,7 @@ if st.session_state.analysis_done and st.session_state.df_out is not None:
                 )
 
                 fig_contacts_ac.update_traces(width=bar_width)
-                st.plotly_chart(fig_contacts_ac, use_container_width=False)
+                st.plotly_chart(fig_contacts_ac, use_container_width=True)
         else:
             st.info("No data to plot. Please run analysis first.")
 
@@ -959,7 +959,7 @@ if st.session_state.analysis_done and st.session_state.df_out is not None:
                 )
 
                 fig_contacts_ar.update_traces(width=bar_width)
-                st.plotly_chart(fig_contacts_ar, use_container_width=False)
+                st.plotly_chart(fig_contacts_ar, use_container_width=True)
         else:
             st.info("No data to plot. Please run analysis first.")
 
