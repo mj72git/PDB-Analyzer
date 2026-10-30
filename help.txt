@@ -2,7 +2,7 @@ PDB Analyzer (v1.3)
 
 It is a Streamlit-based web application for analyzing PDB files, exploring interface analysis, and visualizing 3D protein structures.
 
-Step 1: Define the target and binder chains. 
+Step 1: Clarify mode of the app (single chain target or virtual multichain)
 Step 2: Clarify the residue numbering offset between the initial target PDB and the final output. 
 Step 3: Upload the PDB files.
 
