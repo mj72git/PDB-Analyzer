@@ -105,16 +105,15 @@ target_chain = st.sidebar.text_input("Target Chain Letter", value="A", disabled=
 binder_chain = st.sidebar.text_input("Binder Chain Letter", value="B", disabled=True)
 st.sidebar.caption("🔒 Fixed to standard BindCraft structural conventions (Target: Chain A, Binder: Chain B).")
 check_box_family = st.sidebar.checkbox('In all designs, target protein is same', value = True)
-check_box_bindcraft = st.sidebar.checkbox('All pdbs designed by BindCraft', value = False)
-check_box_multi_chain_target = st.sidebar.checkbox('Target has multi chain', value = False)
-if check_box_family and check_box_bindcraft and check_box_multi_chain_target:
+check_box_multi_chain_target = st.sidebar.checkbox('Target has multi chain', value = False,
+                                                help = "💡 Check if your target was multi-chain prior to BindCraft design (concatenated into a single target chain in the output PDB).")
+if check_box_family  and check_box_multi_chain_target:
     chain_A_length = st.sidebar.number_input("How many amino acids does the first chain of your target have ? ", value=254)
     shift = chain_A_length + 50
 else:
     shift = 0
 
-add_target_res_offset = st.sidebar.number_input("Target Residue Offset ", value=0)
-st.sidebar.markdown("##### (e.g. your Output  target chain starts from Residue 1 but your initial target chain, starts from 24. you should enter 23)")
+add_target_res_offset = st.sidebar.number_input("Target Residue Offset ", value=0, help ="(💡e.g. your Output  target chain starts from Residue 1 but your initial target chain, starts from 24. you should enter 23)" )
 blankk = st.sidebar.header("")
 
 file_path = "help.txt"
