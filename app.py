@@ -103,6 +103,7 @@ if 'pdb_map' not in st.session_state:
 st.sidebar.header("Settings")
 target_chain = st.sidebar.text_input("Target Chain Letter", value="A", disabled=True)
 binder_chain = st.sidebar.text_input("Binder Chain Letter", value="B", disabled=True)
+st.sidebar.caption("🔒 Fixed to standard BindCraft structural conventions (Target: Chain A, Binder: Chain B).")
 check_box_family = st.sidebar.checkbox('In all designs, target protein is same', value = True)
 check_box_bindcraft = st.sidebar.checkbox('All pdbs designed by BindCraft', value = False)
 check_box_multi_chain_target = st.sidebar.checkbox('Target has multi chain', value = False)
