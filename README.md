@@ -94,13 +94,14 @@ If you want to install it locally:
 git clone https://github.com/mj72git/PDB-Analyzer.git
 cd PDB-Analyzer-main
 
-conda create pdb_analyser_env python=3.9 -y
+conda create -n pdb_analyser_env python=3.9 -y
 
 conda activate pdb_analyser_env
 
 pip install -r requirements.txt
 
 After installation, you can run it by:
+
 streamlit run app.py
 
 
