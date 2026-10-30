@@ -764,7 +764,7 @@ if st.session_state.analysis_done and st.session_state.df_out is not None:
                 title='Number of all H bonds '
             )
             fig_contacts_hb.update_traces(width=bar_width)
-            st.plotly_chart(fig_contacts_hb, use_container_width=False)
+            st.plotly_chart(fig_contacts_hb, use_container_width=True)
         else:
             st.info("No data to plot. Please run analysis first.")
 
