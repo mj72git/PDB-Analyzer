@@ -6,6 +6,68 @@ import os
 import numpy as np
 import plotly.express as px
 
+def format_pairs(pairs):
+    if not pairs or pairs == 'nan':
+        return "None"
+    try:
+        return " ".join([f"{a[0]}  {a[1]}  {a[2]} ({a[3]})    ↔   {b[0]} {b[1]}   ({b[2]})  \n" for a, b in pairs])
+
+    except Exception:
+        return str(pairs)
+
+def format_pairs_contacts_only(pairs):
+    if not pairs or pairs == 'nan':
+        return "None"
+    try:
+        return " ".join([f"{a[0]} {a[1]} {a[2]}   ↔   {b[0]} {b[1]} \n" for a, b in pairs])
+
+    except Exception:
+        return str(pairs)
+
+def format_pairs_h_bonds_b_to_t(pairs):
+    if not pairs or pairs == 'nan':
+        return "None"
+    try:
+        return " ".join([f"  {a['donor'][0]} {a['donor'][1]} ({a['donor'][2]})    ->     {a['flag_target_chain']}    {a['acceptor'][0]} {a['acceptor'][1]} ({a['acceptor'][2]})    |    distance = {a['distance_A']} Å    |    Angle = {a['angle_deg']}  degree  \n" for a in pairs])
+    except Exception:
+        return str(pairs)
+
+def format_pairs_h_bonds_t_to_b(pairs):
+    if not pairs or pairs == 'nan':
+        return "None"
+    try:
+        return " ".join([f" {a['flag_target_chain']}   {a['donor'][0]} {a['donor'][1]} ({a['donor'][2]})    ->    {a['acceptor'][0]} {a['acceptor'][1]} ({a['acceptor'][2]})    |    distance = {a['distance_A']} Å     |    Angle = {a['angle_deg']}  degree  \n" for a in pairs])
+    except Exception:
+        return str(pairs)
+
+
+def format_pairs_pi_pi(pairs):
+    if not pairs or pairs == 'nan':
+        return "None"
+    try:
+        return " ".join([f" (target)  {a['target']}   ->     (binder)  {a['binder']}  |  distance = {round(a['distance_A'],2)} Å  |  offset = {a['offset_A']} | angle = {a['angle_deg']} degree  |  geometry = {a['geometry']}  \n" for a in pairs])
+    except Exception:
+        return str(pairs)
+
+def format_pairs_cation_pi(pairs):
+    if not pairs or pairs == 'nan':
+        return "None"
+    try:
+        return " ".join([f" Cation : {a['cation']}   ->   Aromatic : {a['aromatic']}  |  distance = {round(a['distance_A'],2)} Å  |  offset = {a['offset_A']} | angle = {a['theta_deg']} degree \n" for a in pairs])
+    except Exception:
+        return str(pairs)
+
+
+def format_pairs_binder(pairs):
+    if not pairs or pairs == 'nan':
+        return "None"
+    try:
+        return " ".join([f" {a} \n" for a in pairs])
+    except Exception:
+        return str(pairs)
+
+
+
 ###### MODIFIED #####
 if "analysis_done" not in st.session_state:
     st.session_state.analysis_done = False
