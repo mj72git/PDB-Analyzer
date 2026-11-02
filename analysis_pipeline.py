@@ -180,7 +180,7 @@ def analyze_interactions(target_atoms, binder_atoms, add_target_res_offset=0,
 ################################# pi_pi & cation_pi intercations #################################################
 
 def get_ring_geometry(res):
-    """Calculates geometric centroid, normal vector, and residue info for aromatic rings."""
+
     AROMATIC_RINGS = {
         'PHE': ['CG', 'CD1', 'CD2', 'CE1', 'CE2', 'CZ'],
         'TYR': ['CG', 'CD1', 'CD2', 'CE1', 'CE2', 'CZ'],
@@ -191,18 +191,32 @@ def get_ring_geometry(res):
     if res.resname not in AROMATIC_RINGS:
         return None
 
-    ring_atoms = res.atoms.select_atoms("name " + " ".join(AROMATIC_RINGS[res.resname]))
-    if len(ring_atoms) < 5:
+    ring_atoms = res.atoms.select_atoms(
+        "name " + " ".join(AROMATIC_RINGS[res.resname])
+    )
+
+    expected_atoms = len(AROMATIC_RINGS[res.resname])
+
+    # Require all expected ring atoms
+    if len(ring_atoms) != expected_atoms:
         return None
 
-    # 1. Pure Geometric Centroid (Not center of mass)
-    center = ring_atoms.positions.mean(axis=0)
+    # Coordinates of all ring atoms
+    pos = ring_atoms.positions.astype(float)
 
-    # 2. Plane Normal Vector using SVD or cross product of ring plane
-    pos = ring_atoms.positions
-    v1 = pos[1] - pos[0]
-    v2 = pos[2] - pos[0]
-    normal = np.cross(v1, v2)
+    # Geometric centroid
+    center = pos.mean(axis=0)
+
+    # Centre the coordinates around the centroid
+    centered_pos = pos - center
+
+    # Fit a plane using SVD
+    _, _, vh = np.linalg.svd(centered_pos)
+
+    # The last right-singular vector is perpendicular to the fitted plane
+    normal = vh[-1]
+
+    # Normalise the vector
     normal = normal / np.linalg.norm(normal)
 
     return {
@@ -268,12 +282,16 @@ def analyze_pi_interactions_strict(target_atoms, binder_atoms, pi_dist_cutoff=5.
                 offset = np.sqrt(max(0, dist ** 2 - proj_dist ** 2))  # Lateral shift
 
                 if offset <= max_offset:
+
                     geometry = None
+
                     if angle_deg <= 30.0:
                         geometry = "Parallel"
+
                     elif 60.0 <= angle_deg <= 90.0:
                         geometry = "T-shaped (Edge-to-Face)"
 
+                   
                     # Drop intermediate/unclassified angles to prevent false positives
                     if geometry:
                         if shift == 0:
@@ -576,205 +594,119 @@ def analyze_design(pdb_path, target_chain='A', binder_chain='B', add_target_res_
 ################################# H Bond  #################################################
 
     def evaluate_pairs_bindcraft(
-            donors, acceptors, distance_cutoff=3.5, angle_cutoff=90.0, add_target_res_offset = add_target_res_offset,
-            flag = 't', shift = 0):
+            donors, acceptors,
+            distance_cutoff=3.5,
+            angle_cutoff=90.0,
+            add_target_res_offset=add_target_res_offset,
+            flag='t',
+            shift=0):
 
-        # Map acceptor atom names to their chemically bonded parent atom names
         ACCEPTOR_PARENTS = {
-            # Backbone
             'O': 'C',
-            # Side chains
             'OD1': 'CG',
-            'OD2': 'CG',  # ASP
+            'OD2': 'CG',
             'OE1': 'CD',
-            'OE2': 'CD',  # GLU, GLN
-            'OG': 'CB',  # SER
-            'OG1': 'CB',  # THR
-            'OH': 'CZ',  # TYR
+            'OE2': 'CD',
+            'OG': 'CB',
+            'OG1': 'CB',
+            'OH': 'CZ',
             'ND1': 'CG',
-            'NE2': 'CD2',  # HIS
+            'NE2': 'CD2',
         }
+
         results = []
-        t = 0
-        b = 0
-        shift_a = 0
-        shift_d = 0
-        flag_target_chain = None
-        if shift ==0:
-            flag_target_chain = ' '
-        if flag == 't':
-            t = add_target_res_offset
-            shift_d = shift
-            shift_a = 0
-        elif flag == 'b':
-            b = add_target_res_offset
-            shift_a = shift
-            shift_d = 0
+
+        t = add_target_res_offset if flag == 't' else 0
+        b = add_target_res_offset if flag == 'b' else 0
+
+        shift_d = shift if flag == 't' else 0
+        shift_a = shift if flag == 'b' else 0
 
         for d in donors:
             for a in acceptors:
-                # 1. Heavy atom distance check
+
+                # 1. Calculate donor-acceptor distance
                 dist = np.linalg.norm(d.position - a.position)
 
-                if dist <= distance_cutoff:
-                    # 2. Get true parent atom (e.g., Carbon attached to Oxygen)
-                    parent_name = ACCEPTOR_PARENTS.get(a.name)
+                if dist > distance_cutoff:
+                    continue
 
-                    if parent_name:
-                        parent_atoms = a.residue.atoms.select_atoms(f'name {parent_name}')
+                # 2. Find acceptor parent atom
+                parent_name = ACCEPTOR_PARENTS.get(a.name)
 
-                        if len(parent_atoms) > 0:
-                            parent_pos = parent_atoms.positions[0]
+                if parent_name is None:
+                    continue
 
-                            # Vector 1: Acceptor -> Donor
-                            v1 = d.position - a.position
-                            # Vector 2: Acceptor -> Parent
-                            v2 = parent_pos - a.position
+                parent_atoms = a.residue.atoms.select_atoms(
+                    f'name {parent_name}'
+                )
 
-                            cosine = np.dot(v1, v2) / (np.linalg.norm(v1) * np.linalg.norm(v2))
-                            angle_deg = np.degrees(np.arccos(np.clip(cosine, -1.0, 1.0)))
+                # Do not accept interactions without the required geometry
+                if len(parent_atoms) != 1:
+                    continue
 
-                            if angle_deg >= angle_cutoff:
-                                if flag == 't':
+                parent_pos = parent_atoms.positions[0]
 
+                # 3. Calculate D-A-Parent angle
+                v1 = d.position - a.position
+                v2 = parent_pos - a.position
 
+                norm_product = np.linalg.norm(v1) * np.linalg.norm(v2)
 
-                                    if d.resid < shift:
-                                        if shift == 0:
-                                            flag_target_chain = '  '
-                                        else:
-                                            flag_target_chain = ' (A) '
+                if norm_product == 0:
+                    continue
 
-                                        results.append({
-                                            'flag_target_chain' : flag_target_chain,
-                                            'donor': (d.resid + t, d.resname, d.name),
-                                            'acceptor': (a.resid + b, a.resname, a.name),
-                                            'distance_A': round(float(dist), 2),
-                                            'angle_deg': round(float(angle_deg), 1),
-                                        })
-                                    else:
-                                        if shift == 0:
-                                            flag_target_chain = '  '
-                                        else:
-                                            flag_target_chain = ' (B) '
-                                        results.append({
-                                            'flag_target_chain': flag_target_chain,
-                                            'donor': (d.resid + t - shift_d, d.resname, d.name),
-                                            'acceptor': (a.resid + b - shift_a , a.resname, a.name),
-                                            'distance_A': round(float(dist), 2),
-                                            'angle_deg': round(float(angle_deg), 1),
-                                        })
+                cosine = np.dot(v1, v2) / norm_product
 
+                angle_deg = np.degrees(
+                    np.arccos(np.clip(cosine, -1.0, 1.0))
+                )
 
-                                elif flag =='b':
-                                    if a.resid < shift:
-                                        if shift == 0:
-                                            flag_target_chain = '  '
-                                        else:
-                                            flag_target_chain = ' (A) '
-                                        results.append({
-                                            'flag_target_chain' : flag_target_chain,
-                                            'donor': (d.resid + t, d.resname, d.name),
-                                            'acceptor': (a.resid + b, a.resname, a.name),
-                                            'distance_A': round(float(dist), 2),
-                                            'angle_deg': round(float(angle_deg), 1),
-                                        })
-                                    else:
-                                        if shift == 0:
-                                            flag_target_chain = '  '
-                                        else:
-                                            flag_target_chain = ' (B) '
-                                        results.append({
-                                            'flag_target_chain': flag_target_chain,
-                                            'donor': (d.resid + t - shift_d, d.resname, d.name),
-                                            'acceptor': (a.resid + b - shift_a , a.resname, a.name),
-                                            'distance_A': round(float(dist), 2),
-                                            'angle_deg': round(float(angle_deg), 1),
-                                        })
-                                continue
+                # 4. Apply angular criterion
+                if angle_deg < angle_cutoff:
+                    continue
 
+                # 5. Preserve your original residue numbering logic
+                if flag == 't':
+                    is_first = d.resid < shift
+                else:
+                    is_first = a.resid < shift
 
-                    # 3. Fallback if parent atom name isn't in table
-                    if flag == 't':
-                        if d.resid < shift:
-                            if shift == 0:
-                                flag_target_chain = '  '
-                            else:
-                                flag_target_chain = ' (A) '
-                            results.append({
-                                'flag_target_chain': flag_target_chain,
-                                'donor': (d.resid + t, d.resname, d.name),
-                                'acceptor': (a.resid + b, a.resname, a.name),
-                                'distance_A': round(float(dist), 2),
-                                'angle_deg': None,
-                            })
-                        else:
-                            if shift == 0:
-                                flag_target_chain = '  '
-                            else:
-                                flag_target_chain = ' (B) '
-                            results.append({
-                                'flag_target_chain': flag_target_chain,
-                                'donor': (d.resid + t - shift_d, d.resname, d.name),
-                                'acceptor': (a.resid + b - shift_a, a.resname, a.name),
-                                'distance_A': round(float(dist), 2),
-                                'angle_deg': None,
-                            })
-                    elif flag == 'b':
-                        if a.resid < shift:
-                            if shift == 0:
-                                flag_target_chain = '  '
-                            else:
-                                flag_target_chain = ' (A) '
-                            results.append({
-                                'flag_target_chain': flag_target_chain,
-                                'donor': (d.resid + t, d.resname, d.name),
-                                'acceptor': (a.resid + b, a.resname, a.name),
-                                'distance_A': round(float(dist), 2),
-                                'angle_deg': None,
-                            })
-                        else:
-                            if shift == 0:
-                                flag_target_chain = '  '
-                            else:
-                                flag_target_chain = ' (B) '
-                            results.append({
-                                'flag_target_chain': flag_target_chain,
-                                'donor': (d.resid + t - shift_d, d.resname, d.name),
-                                'acceptor': (a.resid + b - shift_a, a.resname, a.name),
-                                'distance_A': round(float(dist), 2),
-                                'angle_deg': None,
-                            })
+                if is_first:
+                    chain_label = '  ' if shift == 0 else ' (A) '
+                    donor_resid = d.resid + t
+                    acceptor_resid = a.resid + b
+                else:
+                    chain_label = '  ' if shift == 0 else ' (B) '
+                    donor_resid = d.resid + t - shift_d
+                    acceptor_resid = a.resid + b - shift_a
+
+                results.append({
+                    'flag_target_chain': chain_label,
+                    'donor': (donor_resid, d.resname, d.name),
+                    'acceptor': (acceptor_resid, a.resname, a.name),
+                    'distance_A': round(float(dist), 2),
+                    'angle_deg': round(float(angle_deg), 1),
+                })
 
         return results
 
-    # Donor heavy atoms (nitrogen and oxygen atoms with attached hydrogens)
     DONOR_NAMES = {
         'N',
-        'NE',
-        'NH1',
-        'NH2',
-        'ND1',
-        'NE2',
-        'OG',
-        'OG1',
-        'OH',
-        'SG',
+        'NE', 'NE1', 'NE2',
+        'NH1', 'NH2',
+        'ND1', 'ND2',
         'NZ',
+        'OG', 'OG1', 'OH',
+        'SG',
     }
 
-    # Acceptor heavy atoms (oxygen and nitrogen atoms with lone pairs)
     ACCEPTOR_NAMES = {
         'O',
-        'OD1',
-        'OD2',
-        'OE1',
-        'OE2',
-        'OG',
-        'OG1',
-        'OH',
-        'ND1',
-        'NE2',
+        'OD1', 'OD2',
+        'OE1', 'OE2',
+        'OG', 'OG1', 'OH',
+        'ND1', 'NE2',
     }
 
     # Convert sets to MDAnalysis selection strings

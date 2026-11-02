@@ -787,7 +787,7 @@ if st.session_state.analysis_done and st.session_state.df_out is not None:
                 st.text(f"Binder: {row['binder_seq']}")
                 pdb_text = st.session_state.pdb_map[row['design_id']]
                 st.text('')
-                st.write("**H-bonds**")
+                st.write("**Putative H-bonds**")
                 st.write("***Target -> Binder***")
                 st.text(format_pairs_h_bonds_t_to_b(row['hbonds_target_to_binder']))
                 st.text('')
