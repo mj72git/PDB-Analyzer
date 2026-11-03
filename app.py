@@ -80,7 +80,7 @@ except ImportError:
 
 from analysis_pipeline import analyze_design
 from helper import *
-st.set_page_config(page_title="PDB Analyser", layout="wide")
+st.set_page_config(page_title="PDB Analyser", page_icon="image.ico", layout="wide")
 
 st.title("PDB Analyser Web Application")
 ################################################################################
