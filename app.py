@@ -137,7 +137,7 @@ st.sidebar.caption(" [Linkedin Profile](https://www.linkedin.com/in/mj-shadfar-3
 st.sidebar.write(" [Github Repository](https://github.com/mj72git/PDB-Analyzer)")
 st.sidebar.caption("PDB Analyser v1.3")
 st.sidebar.caption("")
-st.sidebar.caption("Last modified: 09 Nov 2026")
+st.sidebar.caption("Last modified: 10 Nov 2026")
 st.set_page_config(page_title="PDB Analyser", layout="wide")
 st.sidebar.image("uoa.jpg", width=200)
 st.sidebar.image("image.png", width=150)
@@ -734,6 +734,9 @@ if st.session_state.analysis_done and st.session_state.df_out is not None:
                     y='n_hydrophobic_contacts_Residues',
                     title='Number of hydrophobic Contacts '
                 )
+                fig_contacts.update_yaxes(
+                    tickformat=",d",  # Formats numbers as integers
+                    dtick=2)  # Forces tick intervals to step by exactly 1
                 fig_contacts.update_traces(width=bar_width)
                 st.plotly_chart(fig_contacts, use_container_width=True)
         else:
@@ -820,7 +823,7 @@ if st.session_state.analysis_done and st.session_state.df_out is not None:
             )
             fig_contacts_hb.update_yaxes(
                     tickformat=",d",  # Formats numbers as integers
-                    dtick=1)  # Forces tick intervals to step by exactly 1
+                    dtick=5)  # Forces tick intervals to step by exactly 1
 
             fig_contacts_hb.update_traces(width=bar_width)
             st.plotly_chart(fig_contacts_hb, use_container_width=True)
@@ -1032,7 +1035,6 @@ if st.session_state.analysis_done and st.session_state.df_out is not None:
 
         if  shift ==0  and check_box_family:
             st.subheader("Overall Analysis of Designs")
-            st.write(str(shift))
             def analysis_final(df_col_name):
                 analysis_final = []
                 for _, row in st.session_state.df_out.iterrows():
@@ -1729,5 +1731,8 @@ if st.session_state.analysis_done and st.session_state.df_out is not None:
 
 else:
     st.info("Please upload PDB files. ")
-    blankk = st.header("")
-    st.markdown("#### Before starting, it is recommended to download and read the tutorial")
+    
+    st.markdown("### New to this app?  Download and read the tutorial.")
+    blankk = st.write("")
+    st.markdown("##### After finishing BindCraft run, It is recommended to work through BOA Web App first.")
+    st.caption(" [BOA (BindCraft Output Analysis)](https://bindcraftoutputanalyse-ednrdmyx97eon4hlfkjatb.streamlit.app/)")

@@ -125,7 +125,7 @@ def analyze_interactions(target_atoms, binder_atoms, add_target_res_offset=0,
                     salt_bridges.add((resA_info, resB_info))
                 else:
                     if shift ==0 :
-                        flag = '  '
+                        flag = ' (A) '
                     else:
                         flag = ' (B) '
                     resA_info = (flag, (atomA.resid + add_target_res_offset - shift), resA_name, atomA.name)
@@ -163,7 +163,7 @@ def analyze_interactions(target_atoms, binder_atoms, add_target_res_offset=0,
                 hydrophobic_patches.add((resA_info, resB_info))
             else:
                 if shift == 0:
-                    flag = '  '
+                    flag = ' (A) '
                 else:
                     flag = ' (B) '
                 resA_info = (flag, (atomA.resid + add_target_res_offset - shift), atomA.resname, atomA.name)
