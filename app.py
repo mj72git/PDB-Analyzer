@@ -110,7 +110,7 @@ check_box_multi_chain_target = st.sidebar.checkbox('Target has multi chain', val
                                                 help = "💡 Check if your target was multi-chain prior to BindCraft design (concatenated into a single target chain in the output PDB).")
 #Use session state to force the multi-chain checkbox to stay checked if multi-chain examples were chosen
 
-if st.session_state.get('multi_target_examples', False):
+if st.session_state.get('is_multichain', False):
     shift = 304
     chain_A_length = 254
 elif check_box_family and check_box_multi_chain_target:
@@ -171,12 +171,14 @@ if not st.session_state.analysis_done:
 
         if not check_box_multi_target_examples:
             shift = 0
+            st.session_state.is_multichain = False
             # Directly use your example file paths here!
             files_to_process = glob.glob(os.path.join("examples", "*.pdb"))
             st.success("All example PDB files loaded successfully!")
 
         else:
-            #st.session_state.force_multi_chain = True  # Forces the sidebar checkbox to stay checked!
+
+            st.session_state.is_multichain = True  # Forces the sidebar checkbox to stay checked!
             shift = 304
             chain_A_length = 254
             files_to_process = glob.glob(os.path.join("examples_multi", "*.pdb"))
@@ -330,7 +332,10 @@ if st.session_state.analysis_done and st.session_state.df_out is not None:
     with tab2:
         st.subheader("Visualizations")
 
-
+        # if st.session_state.get('multi_target_examples', False):
+        #     shift = 304
+        #     chain_A_length = 254
+        #
 
         # ensure df is defined
         df = st.session_state.df_out
@@ -1726,6 +1731,7 @@ if st.session_state.analysis_done and st.session_state.df_out is not None:
         st.session_state.df_rank = None
         st.session_state.pdb_map = {}
         st.session_state.analysis_done = False
+        st.session_state.is_multichain = False
         st.rerun()
 
 
