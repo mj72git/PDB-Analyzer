@@ -4,6 +4,7 @@ import pandas as pd
 import tempfile
 import os
 import numpy as np
+import glob
 import plotly.express as px
 
 def format_pairs(pairs):
@@ -131,7 +132,7 @@ st.sidebar.caption(" [Linkedin Profile](https://www.linkedin.com/in/mj-shadfar-3
 st.sidebar.write(" [Github Repository](https://github.com/mj72git/PDB-Analyzer)")
 st.sidebar.caption("PDB Analyser v1.3")
 st.sidebar.caption("")
-st.sidebar.caption("Last modified: 30 Oct 2026")
+st.sidebar.caption("Last modified: 09 Nov 2026")
 st.set_page_config(page_title="PDB Analyser", layout="wide")
 st.sidebar.image("uoa.jpg", width=200)
 st.sidebar.image("image.png", width=150)
@@ -148,94 +149,148 @@ if not st.session_state.analysis_done:
     st.image('image.png', width=500)
     st.subheader("")
     st.markdown("##### Target protein should be one chain (supports virtual multi-chain targets merged in BindCraft output).")
+    st.subheader("")
+    st.markdown("###### You can start to analyse with our designs to get familiar with the app")
+    pdb_files_examples = st.button("Use Examples")
     st.subheader("Upload Files")
-    pdb_files = st.file_uploader("Upload PDB files", type=["pdb"], accept_multiple_files=True)
+    pdb_files_upload = st.file_uploader("Upload PDB files", type=["pdb"], accept_multiple_files=True)
+    files_to_process = []
+    run_flag = 0
+    file_flag = 'example'
+    #results = []
 
-    if pdb_files:
+    if pdb_files_examples:
+
+        if not check_box_multi_chain_target:
+
+            # Directly use your example file paths here!
+            files_to_process = glob.glob(os.path.join("examples", "*.pdb"))
+            st.success("All example PDB files loaded successfully!")
+
+        else:
+            files_to_process = glob.glob(os.path.join("examples_multi", "*.pdb"))
+            st.success("All example PDB files loaded successfully!")
+
+    # Check if examples have been loaded or files were uploaded
+
+    if files_to_process:
+            pdb_files = files_to_process
+
+            st.write(
+                f"Currently analyzing {len(pdb_files)} PDB files from examples."
+            )
+
+            #results = []
+           # progress = st.progress(0)
+            
+            run_flag = 1
+
+    if pdb_files_upload:
+        file_flag = 'upload'
+        pdb_files = pdb_files_upload
         st.success("Files uploaded successfully.")
         if st.button("Run Analysis"):
             tmpdir = tempfile.mkdtemp()
+            run_flag = 1
 
 
-            results = []
-            progress = st.progress(0)
-            for i, pdb in enumerate(pdb_files):
-                pdb_path = os.path.join(tmpdir, pdb.name)
+
+
+    if run_flag == 1:
+
+        results = []
+        progress = st.progress(0)
+
+        # if file_flag == 'upload':
+        #     tmpdir = tempfile.mkdtemp()
+        # else:
+        #     tmpdir = os.path.dirname(pdb_path)
+
+        for i, pdb_item in enumerate(pdb_files):
+            # Handle file paths differently depending on whether it's an upload or an example
+            if file_flag == 'upload':
+                pdb_path = os.path.join(tmpdir, pdb_item.name)
                 with open(pdb_path, "wb") as f:
-                    f.write(pdb.read())
+                    f.write(pdb_item.read())
+            else:
+                # For examples, pdb_item is already the local file path string (e.g., "examples/cp1.pdb")
+                pdb_path = pdb_item
 
-                r = analyze_design(pdb_path, target_chain=target_chain, binder_chain=binder_chain,
-                                   add_target_res_offset=add_target_res_offset,shift = shift, tmpdir=tmpdir,dist_threshod=4)
+            # Get base name without extension
+            base = os.path.splitext(os.path.basename(pdb_path))[0]
 
-                # This removes the '.pdb' extension but leaves the rest of the filename completely intact
-                base = os.path.splitext(pdb.name)[0]
+            try:
+                with open(pdb_path, "r") as fh:
+                    pdb_text = fh.read()
+            except UnicodeDecodeError:
+                with open(pdb_path, "r", encoding="latin-1") as fh:
+                    pdb_text = fh.read()
+            st.session_state.pdb_map[base] = pdb_text
 
-                try:
-                    with open(pdb_path, "r") as fh:
-                        pdb_text = fh.read()
-                except UnicodeDecodeError:
-                    with open(pdb_path, "r", encoding="latin-1") as fh:
-                        pdb_text = fh.read()
-                st.session_state.pdb_map[base] = pdb_text
 
-                record = {'design_id': base}
-                record.update({
-                    'binder_length' : r.get('binder_length'),
-                    'n_contacts_3A_Atom': r.get('n_contacts_3A'),
-                    'n_contacts_4A_Atom': r.get('n_contacts_4A'),
-                    'target_seq': r.get('target_seq'),
-                    'pairs_3A': r.get('pairs_3A'),
-                    'pairs3_multichain_mode': r.get('pairs3_multi'),
-                    '3A_Residues': r.get('3A_Residues'),
-                    'n_contacts_3A_Residues' : r.get('n_contacts_3A_Residues'),
-                    'pairs_4A': r.get('pairs_4A'),
-                    'pairs4_multichain_mode': r.get('pairs4_multi'),
-                    '4A_Residues': r.get('4A_Residues'),
-                    'n_contacts_4A_Residues': r.get('n_contacts_4A_Residues'),
-                    'hydrophobic_contacts' : r.get('hypho'),
-                    'n_hydrophobic_contacts_ATOM': r.get('n_hypho_list'),
-                    'hydrophobic_contacts_Residues' : r.get('hypho_Residues'),
-                    'hydrophobic_Residues_multichain_mode': r.get('hypho_multi'),
-                    'n_hydrophobic_contacts_Residues' : r.get('number_hydrophobic_contacts_Residues'),
-                    'salt_bridge' : r.get('salt_bridge'),
-                    'n_salt_bridge_ATOM': r.get('n_salt_bridge'),
-                    'salt_bridge_contacts_Residues': r.get('salt_bridge_Residues'),
-                    'salt_bridge_Residues_multichain_mode': r.get('salt_bridge_multi'),
-                    'n_salt_bridge_Residues' : r.get('number_salt_bridge_Residues'),
-                    'pi_pi_contacts' : r.get('pi_pi_contacts'),
-                    'n_pi_pi_contacts' : r.get('n_pi_pi_contacts'),
-                    'cation_pi_contacts' : r.get('cation_pi_contacts'),
-                    'n_cation_pi_contacts' : r.get('n_cation_pi_contacts'),
-                    'hbonds_target_to_binder' : r.get('hbonds_target_to_binder'),
-                    'hbonds_binder_to_target' : r.get('hbonds_binder_to_target'),
-                    'Number of All H bonds' : r.get('Number of All H bonds'),
-                    'binder_seq': r.get('binder_seq'),
-                    'binder_hydrophobic_res': r.get('hydrophobic_res'),
-                    'binder_hydrophobic_res_fraction': r.get('hydrophobic_res_fraction'),
-                    'binder_hydrophobic_res_interface': r.get('hydrophobic_res_interface'),
-                    'binder_hydrophobic_res_fraction_interface': r.get('hydrophobic_res_fraction_interface'),
-                    'binder_positive_res': r.get('positive_res'),
-                    'binder_positive_res_fraction': r.get('positive_res_fraction'),
-                    'binder_positive_res_interface': r.get('positive_res_interface'),
-                    'binder_positive_res_fraction_interface': r.get('positive_res_fraction_interface'),
-                    'binder_negative_res': r.get('negative_res'),
-                    'binder_negative_res_fraction': r.get('negative_res_fraction'),
-                    'binder_negative_res_interface': r.get('negative_res_interface'),
-                    'binder_negative_res_fraction_interface': r.get('negative_res_fraction_interface'),
-                    'binder_aromatic_res': r.get('aromatic_res'),
-                    'binder_aromatic_res_fraction': r.get('aromatic_res_fraction'),
-                    'binder_aromatic_res_interface': r.get('aromatic_res_interface'),
-                    'binder_aromatic_res_fraction_interface': r.get('aromatic_res_fraction_interface')
+            r = analyze_design(pdb_path, target_chain=target_chain, binder_chain=binder_chain,
+                               add_target_res_offset=add_target_res_offset, shift=shift,
+                               tmpdir=os.path.dirname(pdb_path) if file_flag == 'example' else tmpdir,
+                               dist_threshod=4)
 
-                })
-                results.append(record)
-                progress.progress((i+1)/len(pdb_files))
+            #base = os.path.splitext(os.path.basename(pdb_path))[0]
+            record = {'design_id': base}
+            record.update({
+                'binder_length' : r.get('binder_length'),
+                'n_contacts_3A_Atom': r.get('n_contacts_3A'),
+                'n_contacts_4A_Atom': r.get('n_contacts_4A'),
+                'target_seq': r.get('target_seq'),
+                'pairs_3A': r.get('pairs_3A'),
+                'pairs3_multichain_mode': r.get('pairs3_multi'),
+                '3A_Residues': r.get('3A_Residues'),
+                'n_contacts_3A_Residues' : r.get('n_contacts_3A_Residues'),
+                'pairs_4A': r.get('pairs_4A'),
+                'pairs4_multichain_mode': r.get('pairs4_multi'),
+                '4A_Residues': r.get('4A_Residues'),
+                'n_contacts_4A_Residues': r.get('n_contacts_4A_Residues'),
+                'hydrophobic_contacts' : r.get('hypho'),
+                'n_hydrophobic_contacts_ATOM': r.get('n_hypho_list'),
+                'hydrophobic_contacts_Residues' : r.get('hypho_Residues'),
+                'hydrophobic_Residues_multichain_mode': r.get('hypho_multi'),
+                'n_hydrophobic_contacts_Residues' : r.get('number_hydrophobic_contacts_Residues'),
+                'salt_bridge' : r.get('salt_bridge'),
+                'n_salt_bridge_ATOM': r.get('n_salt_bridge'),
+                'salt_bridge_contacts_Residues': r.get('salt_bridge_Residues'),
+                'salt_bridge_Residues_multichain_mode': r.get('salt_bridge_multi'),
+                'n_salt_bridge_Residues' : r.get('number_salt_bridge_Residues'),
+                'pi_pi_contacts' : r.get('pi_pi_contacts'),
+                'n_pi_pi_contacts' : r.get('n_pi_pi_contacts'),
+                'cation_pi_contacts' : r.get('cation_pi_contacts'),
+                'n_cation_pi_contacts' : r.get('n_cation_pi_contacts'),
+                'hbonds_target_to_binder' : r.get('hbonds_target_to_binder'),
+                'hbonds_binder_to_target' : r.get('hbonds_binder_to_target'),
+                'Number of All H bonds' : r.get('Number of All H bonds'),
+                'binder_seq': r.get('binder_seq'),
+                'binder_hydrophobic_res': r.get('hydrophobic_res'),
+                'binder_hydrophobic_res_fraction': r.get('hydrophobic_res_fraction'),
+                'binder_hydrophobic_res_interface': r.get('hydrophobic_res_interface'),
+                'binder_hydrophobic_res_fraction_interface': r.get('hydrophobic_res_fraction_interface'),
+                'binder_positive_res': r.get('positive_res'),
+                'binder_positive_res_fraction': r.get('positive_res_fraction'),
+                'binder_positive_res_interface': r.get('positive_res_interface'),
+                'binder_positive_res_fraction_interface': r.get('positive_res_fraction_interface'),
+                'binder_negative_res': r.get('negative_res'),
+                'binder_negative_res_fraction': r.get('negative_res_fraction'),
+                'binder_negative_res_interface': r.get('negative_res_interface'),
+                'binder_negative_res_fraction_interface': r.get('negative_res_fraction_interface'),
+                'binder_aromatic_res': r.get('aromatic_res'),
+                'binder_aromatic_res_fraction': r.get('aromatic_res_fraction'),
+                'binder_aromatic_res_interface': r.get('aromatic_res_interface'),
+                'binder_aromatic_res_fraction_interface': r.get('aromatic_res_fraction_interface')
 
-            st.session_state.df_out = pd.DataFrame(results)
-            df_rank = st.session_state.df_out.copy()
-            st.session_state.df_rank = df_rank.sort_values(by=['n_contacts_3A_Atom','n_hydrophobic_contacts_ATOM','n_salt_bridge_ATOM','n_contacts_4A_Atom'], ascending=[False, False, False, False])
-            st.session_state.analysis_done = True
-            st.rerun()
+            })
+            results.append(record)
+            progress.progress((i+1)/len(pdb_files))
+
+        st.session_state.df_out = pd.DataFrame(results)
+        st.session_state.analysis_done = True
+        st.rerun()
+
 
 ############################ AFTER ANALYSIS ####################################
 
@@ -256,26 +311,7 @@ if st.session_state.analysis_done and st.session_state.df_out is not None:
             if col in df_display.columns:
                 df_display[col] = df_display[col].apply(lambda x: str(x))
         st.dataframe(df_display)
-
-        st.subheader("Ranked Designs")
-        df_rank_display = st.session_state.df_rank.copy()
-        for col in ['binder_length', 'binder_hydrophobic_res', 'binder_hydrophobic_res_fraction',
-                    'binder_hydrophobic_res_interface', 'binder_hydrophobic_res_fraction_interface',
-                    'binder_positive_res', 'binder_positive_res_fraction', 'binder_positive_res_interface',
-                    'binder_positive_res_fraction_interface', 'binder_negative_res', 'binder_negative_res_fraction',
-                    'binder_negative_res_interface', 'binder_negative_res_fraction_interface','hbonds_target_to_binder','hbonds_binder_to_target',
-                    'binder_aromatic_res', 'binder_aramotic_res_fraction', 'binder_aromatic_res_interface', 'pairs3_multichain_mode', 'pairs4_multichain_mode',
-                    'binder_aromatic_res_fraction_interface', 'Average_pLDDT', 'pairs_3A', 'n_salt_bridge_Residues',
-                    'n_contacts_3A_Residues', 'n_contacts_4A_Residue', 'pairs_4A', 'hydrophobic_contacts',
-                    'hydrophobic_Residues_multichain_mode', 'salt_bridge_Residues_multichain_mode',
-                    'salt_bridge', 'pi_pi_contacts', 'cation_pi_contacts']:
-            if col in df_rank_display.columns:
-                df_rank_display[col] = df_rank_display[col].apply(lambda x: str(x))
-        st.dataframe(df_rank_display)
-
-
         st.download_button("Download Summary CSV", st.session_state.df_out.to_csv(index=False), "summary.csv")
-        st.download_button("Download Ranked CSV", st.session_state.df_rank.to_csv(index=False), "ranked.csv")
 
 ############################################################################################################################
 ############################################################################################################################
@@ -726,6 +762,9 @@ if st.session_state.analysis_done and st.session_state.df_out is not None:
                     y='n_pi_pi_contacts',
                     title='Number of Pi_Pi contacts '
                 )
+                fig_contacts_pi_pi.update_yaxes(
+                    tickformat=",d",  # Formats numbers as integers
+                    dtick=1)  # Forces tick intervals to step by exactly 1
                 fig_contacts_pi_pi.update_traces(width=bar_width)
                 st.plotly_chart(fig_contacts_pi_pi, use_container_width=True)
         else:
@@ -746,6 +785,10 @@ if st.session_state.analysis_done and st.session_state.df_out is not None:
                     y='n_cation_pi_contacts',
                     title='Number of Cation_Pi contacts '
                 )
+                fig_contacts_cation_pi.update_yaxes(
+                    tickformat=",d",  # Formats numbers as integers
+                    dtick=1  # Forces tick intervals to step by exactly 1
+                )
                 fig_contacts_cation_pi.update_traces(width=bar_width)
 
                 st.plotly_chart(fig_contacts_cation_pi, use_container_width=True)
@@ -763,6 +806,10 @@ if st.session_state.analysis_done and st.session_state.df_out is not None:
                 y='Number of All H bonds',
                 title='Number of all H bonds '
             )
+            fig_contacts_hb.update_yaxes(
+                    tickformat=",d",  # Formats numbers as integers
+                    dtick=1)  # Forces tick intervals to step by exactly 1
+
             fig_contacts_hb.update_traces(width=bar_width)
             st.plotly_chart(fig_contacts_hb, use_container_width=True)
         else:
@@ -1048,12 +1095,17 @@ if st.session_state.analysis_done and st.session_state.df_out is not None:
                     tickangle=-90,
                 )
 
+                fig_contacts.update_yaxes(
+                    tickformat=",d",  # Formats numbers as integers
+                    dtick=1  # Forces tick intervals to step by exactly 1
+                )
+
                 fig_contacts.update_layout(
                     height=600,
                     margin=dict(b=140),
                 )
 
-                st.plotly_chart(fig_contacts, use_container_width=False)
+                st.plotly_chart(fig_contacts, use_container_width=True)
             else:
                 st.info("No 3Å contacts found across the loaded designs.")
              #########################################################################
@@ -1087,12 +1139,17 @@ if st.session_state.analysis_done and st.session_state.df_out is not None:
                     tickangle=-90,
                 )
 
+                fig_contacts4.update_yaxes(
+                    tickformat=",d",  # Formats numbers as integers
+                    dtick=1  # Forces tick intervals to step by exactly 1
+                )
+
                 fig_contacts4.update_layout(
                     height=600,
                     margin=dict(b=140),
                 )
 
-                st.plotly_chart(fig_contacts4, use_container_width=False)
+                st.plotly_chart(fig_contacts4, use_container_width=True)
             else:
                 st.info("No 4Å contacts found across the loaded designs.")
 
@@ -1136,12 +1193,17 @@ if st.session_state.analysis_done and st.session_state.df_out is not None:
                     tickangle=-90,
                 )
 
+                fig_contacts_hypho.update_yaxes(
+                    tickformat=",d",  # Formats numbers as integers
+                    dtick=1  # Forces tick intervals to step by exactly 1
+                )
+
                 fig_contacts_hypho.update_layout(
                     height=600,
                     margin=dict(b=140),
                 )
 
-                st.plotly_chart(fig_contacts_hypho, use_container_width=False)
+                st.plotly_chart(fig_contacts_hypho, use_container_width=True)
             else:
                 st.info("No hydrophobic contacts found across the loaded designs.")
             #####################################################################################
@@ -1183,12 +1245,17 @@ if st.session_state.analysis_done and st.session_state.df_out is not None:
                     tickangle=-90,
                 )
 
+                fig_contacts_salt_bridge.update_yaxes(
+                    tickformat=",d",  # Formats numbers as integers
+                    dtick=1  # Forces tick intervals to step by exactly 1
+                )
+
                 fig_contacts_salt_bridge.update_layout(
                     height=600,
                     margin=dict(b=140),
                 )
 
-                st.plotly_chart(fig_contacts_salt_bridge, use_container_width=False)
+                st.plotly_chart(fig_contacts_salt_bridge, use_container_width=True)
             else:
                 st.info("No salt bridge contacts found across the loaded designs.")
         ######### ######### ######### ######### ######### ######### ######### #########
@@ -1322,6 +1389,11 @@ if st.session_state.analysis_done and st.session_state.df_out is not None:
                     tickangle=-90,
                 )
 
+                fig_contacts.update_yaxes(
+                    tickformat=",d",  # Formats numbers as integers
+                    dtick=1  # Forces tick intervals to step by exactly 1
+                )
+
                 fig_contacts.update_layout(
                     height=600,
                     margin=dict(b=140),
@@ -1394,12 +1466,17 @@ if st.session_state.analysis_done and st.session_state.df_out is not None:
                     tickangle=-90,
                 )
 
+                fig_contacts_4.update_yaxes(
+                    tickformat=",d",  # Formats numbers as integers
+                    dtick=1  # Forces tick intervals to step by exactly 1
+                )
+
                 fig_contacts_4.update_layout(
                     height=600,
                     margin=dict(b=140),
                 )
 
-                st.plotly_chart(fig_contacts_4, use_container_width=False)
+                st.plotly_chart(fig_contacts_4, use_container_width=True)
             else:
                 st.info("No 4Å contacts found across the loaded designs.")
 
@@ -1466,12 +1543,17 @@ if st.session_state.analysis_done and st.session_state.df_out is not None:
                     tickangle=-90,
                 )
 
+                fig_contacts_hypho.update_yaxes(
+                    tickformat=",d",  # Formats numbers as integers
+                    dtick=1  # Forces tick intervals to step by exactly 1
+                )
+
                 fig_contacts_hypho.update_layout(
                     height=600,
                     margin=dict(b=140),
                 )
 
-                st.plotly_chart(fig_contacts_hypho, use_container_width=False)
+                st.plotly_chart(fig_contacts_hypho, use_container_width=True)
             else:
                 st.info("No Hydrophobic contacts found across the loaded designs.")
             ###########################################################################
@@ -1538,12 +1620,17 @@ if st.session_state.analysis_done and st.session_state.df_out is not None:
                     tickangle=-90,
                 )
 
+                fig_contacts_sb.update_yaxes(
+                    tickformat=",d",  # Formats numbers as integers
+                    dtick=1  # Forces tick intervals to step by exactly 1
+                )
+
                 fig_contacts_sb.update_layout(
                     height=600,
                     margin=dict(b=140),
                 )
 
-                st.plotly_chart(fig_contacts_sb, use_container_width=False)
+                st.plotly_chart(fig_contacts_sb, use_container_width=True)
             else:
                 st.info("No Salt Bridge contacts found across the loaded designs.")
 
