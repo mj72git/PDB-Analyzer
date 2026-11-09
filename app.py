@@ -108,7 +108,12 @@ st.sidebar.caption("🔒 Fixed to standard BindCraft structural conventions (Tar
 check_box_family = st.sidebar.checkbox('In all designs, target protein is same', value = True)
 check_box_multi_chain_target = st.sidebar.checkbox('Target has multi chain', value = False,
                                                 help = "💡 Check if your target was multi-chain prior to BindCraft design (concatenated into a single target chain in the output PDB).")
-if check_box_family  and check_box_multi_chain_target:
+#Use session state to force the multi-chain checkbox to stay checked if multi-chain examples were chosen
+
+if st.session_state.get('multi_target_examples', False):
+    shift = 304
+    chain_A_length = 254
+elif check_box_family and check_box_multi_chain_target:
     chain_A_length = st.sidebar.number_input("How many amino acids does the first chain of your target have ? ", value=254)
     shift = chain_A_length + 50
 else:
@@ -153,7 +158,8 @@ if not st.session_state.analysis_done:
     st.markdown("##### You can start to analyse with our designs to get familiar with the app")
    # st.markdown("###### If you want to try example mode with multichain target, use the related checkbox and then do NOT change '254'. ")
     pdb_files_examples = st.button("Use Examples")
-    multi_target_examples = st.checkbox('Multi target examples (virtual multi-chain targets merged in BindCraft output)', value = False)
+    check_box_multi_target_examples = st.checkbox('Multi target examples (virtual multi-chain targets merged in BindCraft output)',
+                                        value = False, key = 'multi_target_examples')
     st.subheader("Upload Files")
     pdb_files_upload = st.file_uploader("Upload PDB files", type=["pdb"], accept_multiple_files=True)
     files_to_process = []
@@ -163,14 +169,16 @@ if not st.session_state.analysis_done:
 
     if pdb_files_examples:
 
-        if not multi_target_examples:
-
+        if not check_box_multi_target_examples:
+            shift = 0
             # Directly use your example file paths here!
             files_to_process = glob.glob(os.path.join("examples", "*.pdb"))
             st.success("All example PDB files loaded successfully!")
 
         else:
+            #st.session_state.force_multi_chain = True  # Forces the sidebar checkbox to stay checked!
             shift = 304
+            chain_A_length = 254
             files_to_process = glob.glob(os.path.join("examples_multi", "*.pdb"))
             st.success("All example PDB files loaded successfully!")
 
@@ -345,7 +353,7 @@ if st.session_state.analysis_done and st.session_state.df_out is not None:
 
                 ############      ############     Single Chain      ############      ############
 
-                if not check_box_multi_chain_target:
+                if shift == 0 :
 
                     # Handle raw_pairs
                     raw_pairs = row.get('pairs_4A')
@@ -503,8 +511,9 @@ if st.session_state.analysis_done and st.session_state.df_out is not None:
 
                     #########   MULTICHAIN VISUALITATION  #########
                     ########################################################################
-                else:
+                elif shift != 0 :
                     # Handle raw_pairs
+
                     raw_pairs = row.get('pairs_4A')
                     if isinstance(raw_pairs, str) and raw_pairs.strip().lower() in ["nan", "", "none"]:
                         raw_pairs = None
@@ -552,7 +561,7 @@ if st.session_state.analysis_done and st.session_state.df_out is not None:
                     view = py3Dmol.view(width=900, height=500)
                     view.addModel(pdb_text, 'pdb')
 
-                    background_color = st.selectbox("Background Color", ["black", "white", "grey", "cyan", "red"],
+                    background_color = st.selectbox("Background Color Multitarget", ["black", "white", "grey", "cyan", "red"],
                                                     index=0,
                                                     key=f"background_color_{selected_design}")
                     view.setBackgroundColor(background_color)
@@ -1021,9 +1030,9 @@ if st.session_state.analysis_done and st.session_state.df_out is not None:
 ############################################################################################################################
     with tab6:
 
-        if not check_box_multi_chain_target and check_box_family:
+        if  shift ==0  and check_box_family:
             st.subheader("Overall Analysis of Designs")
-
+            st.write(str(shift))
             def analysis_final(df_col_name):
                 analysis_final = []
                 for _, row in st.session_state.df_out.iterrows():
@@ -1268,8 +1277,7 @@ if st.session_state.analysis_done and st.session_state.df_out is not None:
         elif not check_box_family:
             st.subheader("This tab only works for the same targets!")
 
-
-        elif check_box_family and check_box_multi_chain_target:
+        elif (shift != 0 or check_box_multi_target_examples ) and check_box_family:
 
             st.subheader("Overall Analysis of Designs for multichain target")
 
