@@ -25,7 +25,6 @@ https://pdbanalyzermjshadfar.streamlit.app/
   
 - Provides buttons to download:
   - summary CSV  
-  - Ranked designs CSV  
 
 ---
 
