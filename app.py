@@ -151,8 +151,9 @@ if not st.session_state.analysis_done:
     st.markdown("##### Target protein should be one chain (supports virtual multi-chain targets merged in BindCraft output).")
     st.subheader("")
     st.markdown("##### You can start to analyse with our designs to get familiar with the app")
-    st.markdown("###### If you want to try mexample mode with multichain target, use the related checkbox and then do NOT change '254'. ")
+   # st.markdown("###### If you want to try example mode with multichain target, use the related checkbox and then do NOT change '254'. ")
     pdb_files_examples = st.button("Use Examples")
+    multi_target_examples = st.checkbox('Multi target examples (virtual multi-chain targets merged in BindCraft output)', value = False)
     st.subheader("Upload Files")
     pdb_files_upload = st.file_uploader("Upload PDB files", type=["pdb"], accept_multiple_files=True)
     files_to_process = []
@@ -162,13 +163,14 @@ if not st.session_state.analysis_done:
 
     if pdb_files_examples:
 
-        if not check_box_multi_chain_target:
+        if not multi_target_examples:
 
             # Directly use your example file paths here!
             files_to_process = glob.glob(os.path.join("examples", "*.pdb"))
             st.success("All example PDB files loaded successfully!")
 
         else:
+            shift = 304
             files_to_process = glob.glob(os.path.join("examples_multi", "*.pdb"))
             st.success("All example PDB files loaded successfully!")
 
