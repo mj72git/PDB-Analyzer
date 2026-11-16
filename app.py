@@ -1137,8 +1137,8 @@ if st.session_state.analysis_done and st.session_state.df_out is not None:
 
             if sorted_items_4:
 
-                resids4 = [(resid) for resid, _ in sorted_items_3]
-                counts4 = [count for _, count in sorted_items_3]
+                resids4 = [(resid) for resid, _ in sorted_items_4]
+                counts4 = [count for _, count in sorted_items_4]
 
                 residue_labels4 = [f"{resid}    ({resname_by_resid.get(resid, 'UNK')})"
                                   for resid in resids4]
