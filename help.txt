@@ -9,7 +9,7 @@ Step 3: Upload the PDB files.
 After processing, the app provides seven tabs: 
 
 1. Summary:
-- Displays all analysed results in an interactive table.  
+- Displays all analysed results in an interactive table.   
 
 2. Visualisations: 
 - Interactive 3D structure viewer using py3Dmol. 
