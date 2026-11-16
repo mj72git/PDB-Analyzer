@@ -137,7 +137,7 @@ st.sidebar.caption(" [Linkedin Profile](https://www.linkedin.com/in/mj-shadfar-3
 st.sidebar.write(" [Github Repository](https://github.com/mj72git/PDB-Analyzer)")
 st.sidebar.caption("PDB Analyser v1.3")
 st.sidebar.caption("")
-st.sidebar.caption("Last modified: 10 Nov 2026")
+st.sidebar.caption("Last modified: 17 Nov 2026")
 st.set_page_config(page_title="PDB Analyser", layout="wide")
 st.sidebar.image("uoa.jpg", width=200)
 st.sidebar.image("image.png", width=150)
